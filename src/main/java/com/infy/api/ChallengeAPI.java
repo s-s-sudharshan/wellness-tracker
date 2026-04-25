@@ -13,9 +13,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.infy.dto.ActiveChallengeResponseDTO;
 import com.infy.dto.ChallengeRequestDTO;
 import com.infy.dto.ChallengeResponseDTO;
+import com.infy.dto.JoinChallengeRequestDTO;
+import com.infy.dto.MyChallengeResponseDTO;
 import com.infy.exception.WellnessTrackerException;
+import com.infy.service.ChallengeParticipantService;
 import com.infy.service.ChallengeService;
 
 import jakarta.validation.Valid;
@@ -26,6 +30,9 @@ public class ChallengeAPI {
 
     @Autowired
     private ChallengeService challengeService;
+
+    @Autowired
+    private ChallengeParticipantService participantService;
 
     @Autowired
     private Environment env;
@@ -41,17 +48,46 @@ public class ChallengeAPI {
 
     // US 13 - Get all challenges created by a manager
     @GetMapping(value = "/challenges/managers/{managerId}")
-    public ResponseEntity<List<ChallengeResponseDTO>> getChallengesByManager(@PathVariable Integer managerId)
+    public ResponseEntity<List<ChallengeResponseDTO>> getChallengesByManager(
+            @PathVariable Integer managerId)
             throws WellnessTrackerException {
         List<ChallengeResponseDTO> challenges = challengeService.getChallengesByManager(managerId);
         return new ResponseEntity<>(challenges, HttpStatus.OK);
     }
 
-    // US 03 (prep) - Get a single challenge by ID
+    // US 13 / US 03 (prep) - Get a single challenge by ID
     @GetMapping(value = "/challenges/{challengeId}")
-    public ResponseEntity<ChallengeResponseDTO> getChallengeById(@PathVariable Integer challengeId)
+    public ResponseEntity<ChallengeResponseDTO> getChallengeById(
+            @PathVariable Integer challengeId)
             throws WellnessTrackerException {
         ChallengeResponseDTO challenge = challengeService.getChallengeById(challengeId);
         return new ResponseEntity<>(challenge, HttpStatus.OK);
+    }
+
+    // US 03 - Get all active/upcoming challenges visible to a user
+    @GetMapping(value = "/challenges/users/{userId}")
+    public ResponseEntity<List<ActiveChallengeResponseDTO>> getActiveChallenges(
+            @PathVariable Integer userId)
+            throws WellnessTrackerException {
+        List<ActiveChallengeResponseDTO> challenges = participantService.getActiveChallenges(userId);
+        return new ResponseEntity<>(challenges, HttpStatus.OK);
+    }
+
+    // US 03 - Employee joins a challenge
+    @PostMapping(value = "/challenges/join")
+    public ResponseEntity<String> joinChallenge(@Valid @RequestBody JoinChallengeRequestDTO requestDTO)
+            throws WellnessTrackerException {
+        Integer participantId = participantService.joinChallenge(requestDTO);
+        String successMessage = env.getProperty("API.JOIN_CHALLENGE_SUCCESS") + participantId;
+        return new ResponseEntity<>(successMessage, HttpStatus.CREATED);
+    }
+
+    // US 03 - Get My Challenges (all joined challenges with live progress)
+    @GetMapping(value = "/challenges/users/{userId}/my-challenges")
+    public ResponseEntity<List<MyChallengeResponseDTO>> getMyChallenges(
+            @PathVariable Integer userId)
+            throws WellnessTrackerException {
+        List<MyChallengeResponseDTO> myChallenges = participantService.getMyChallenges(userId);
+        return new ResponseEntity<>(myChallenges, HttpStatus.OK);
     }
 }

@@ -191,3 +191,39 @@ INSERT INTO activity_logs (user_id, activity_type, activity_date, activity_value
 (3, 'STEPS', '2026-04-15', 7200, 'steps', NULL),
 (3, 'WORKOUT', '2026-04-16', 30, 'minutes', 'Morning run'),
 (3, 'WATER', '2026-04-17', 1.5, 'liters', NULL);
+
+-- US 13 seed data: Challenges created by Sarah Connor (manager, user_id = 1)
+
+INSERT INTO challenges (title, description, created_by, metric_type, goal_value, difficulty, start_date, end_date, visibility_type, department_id, reward_badge_id, is_featured, status) VALUES
+
+('10K Steps Daily Challenge',
+ 'Walk 10,000 steps every day for a week to boost your cardiovascular health.',
+ 1, 'STEPS', 70000, 'MEDIUM',
+ '2026-04-28', '2026-05-04',
+ 'COMPANY_WIDE', NULL, NULL, TRUE, 'UPCOMING'),
+
+('Morning Workout Sprint',
+ 'Complete 120 minutes of workout this week. Any exercise counts — gym, yoga, cycling.',
+ 1, 'WORKOUT', 120, 'EASY',
+ '2026-04-28', '2026-05-04',
+ 'DEPARTMENT', 1, NULL, FALSE, 'UPCOMING'),
+
+('Hydration Hero',
+ 'Log at least 21 liters of water intake over 7 days. Stay hydrated, stay sharp.',
+ 1, 'WATER', 21, 'EASY',
+ '2026-04-26', '2026-05-02',
+ 'COMPANY_WIDE', NULL, NULL, TRUE, 'ACTIVE'),
+
+('Mindfulness Month',
+ 'Meditate for a total of 300 minutes this month. Build focus and reduce stress.',
+ 1, 'MEDITATION', 300, 'HARD',
+ '2026-04-01', '2026-04-30',
+ 'COMPANY_WIDE', NULL, NULL, FALSE, 'ACTIVE'),
+
+('Sleep Reset Week',
+ 'Log at least 49 hours of sleep over 7 days. Prioritize recovery this week.',
+ 1, 'SLEEP', 49, 'MEDIUM',
+ '2026-03-01', '2026-03-07',
+ 'DEPARTMENT', 1, NULL, FALSE, 'COMPLETED');
+ 
+ 
