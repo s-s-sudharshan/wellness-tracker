@@ -12,5 +12,6 @@ public interface ChallengeService {
 
     public List<ChallengeResponseDTO> getChallengesByManager(Integer managerId) throws WellnessTrackerException;
 
-    public ChallengeResponseDTO getChallengeById(Integer challengeId) throws WellnessTrackerException;
+    public ChallengeResponseDTO getChallengeById(Integer challengeId, Integer requestingUserId)
+            throws WellnessTrackerException;
 }

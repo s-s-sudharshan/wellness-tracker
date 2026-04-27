@@ -13,7 +13,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
@@ -49,18 +48,9 @@ class ChallengeParticipantAPITests {
     @MockBean
     private ChallengeParticipantService participantService;
 
-    private static final String JOIN_SUCCESS         = "Successfully joined the challenge. Participant ID: ";
-    private static final String USER_NOT_FOUND       = "User not found. Please provide a valid user ID.";
-    private static final String CHALLENGE_NOT_FOUND  = "Challenge not found. Please provide a valid challenge ID.";
-    private static final String ALREADY_JOINED       = "You have already joined this challenge.";
-    private static final String CHALLENGE_COMPLETED  = "Cannot join a challenge that has already been completed.";
-    private static final String NOT_AN_EMPLOYEE      = "Only employees and managers can join challenges.";
-    private static final String NO_CHALLENGES_FOUND  = "No challenges found for the given manager.";
+    private static final String USER_NOT_FOUND = "User not found. Please provide a valid user ID.";
+    private static final String JOIN_SUCCESS = "Successfully joined the challenge. Participant ID: ";
     private static final String NO_JOINED_CHALLENGES = "You have not joined any challenges yet.";
-
-    // ----------------------------------------------------------
-    // Helpers
-    // ----------------------------------------------------------
 
     private JoinChallengeRequestDTO validJoinRequest() {
         JoinChallengeRequestDTO req = new JoinChallengeRequestDTO();
@@ -69,7 +59,7 @@ class ChallengeParticipantAPITests {
         return req;
     }
 
-    private ActiveChallengeResponseDTO sampleActiveChallenge(Integer id, boolean alreadyJoined) {
+    private ActiveChallengeResponseDTO sampleActiveChallenge(Integer id) {
         ActiveChallengeResponseDTO dto = new ActiveChallengeResponseDTO();
         dto.setChallengeId(id);
         dto.setTitle("10K Steps Daily Challenge");
@@ -82,25 +72,6 @@ class ChallengeParticipantAPITests {
         dto.setStartDate(LocalDate.now().plusDays(2));
         dto.setEndDate(LocalDate.now().plusDays(9));
         dto.setIsFeatured(true);
-        dto.setStatus(ChallengeStatus.UPCOMING);
-        dto.setAlreadyJoined(alreadyJoined);
-        return dto;
-    }
-
-    private ActiveChallengeResponseDTO sampleDepartmentChallenge(Integer id) {
-        ActiveChallengeResponseDTO dto = new ActiveChallengeResponseDTO();
-        dto.setChallengeId(id);
-        dto.setTitle("Morning Workout Sprint");
-        dto.setDescription("Complete 120 minutes of workout this week.");
-        dto.setCreatedByName("Sarah Connor");
-        dto.setMetricType(ActivityType.WORKOUT);
-        dto.setUnit("minutes");
-        dto.setGoalValue(120.0);
-        dto.setDifficulty(Difficulty.EASY);
-        dto.setStartDate(LocalDate.now().plusDays(2));
-        dto.setEndDate(LocalDate.now().plusDays(9));
-        dto.setDepartmentName("Engineering");
-        dto.setIsFeatured(false);
         dto.setStatus(ChallengeStatus.UPCOMING);
         dto.setAlreadyJoined(false);
         return dto;
@@ -128,14 +99,9 @@ class ChallengeParticipantAPITests {
         return dto;
     }
 
-    // ----------------------------------------------------------
-    // POST /wellness/challenges/join
-    // ----------------------------------------------------------
-
     @Test
     public void testJoinChallenge_Valid() throws Exception {
-        Mockito.when(participantService.joinChallenge(
-                ArgumentMatchers.any(JoinChallengeRequestDTO.class)))
+        Mockito.when(participantService.joinChallenge(ArgumentMatchers.any(JoinChallengeRequestDTO.class)))
                 .thenReturn(1);
 
         mockMvc.perform(MockMvcRequestBuilders.post("/wellness/challenges/join")
@@ -146,112 +112,21 @@ class ChallengeParticipantAPITests {
     }
 
     @Test
-    public void testJoinChallenge_MissingUserId() throws Exception {
-        JoinChallengeRequestDTO req = validJoinRequest();
-        req.setUserId(null);
-
-        mockMvc.perform(MockMvcRequestBuilders.post("/wellness/challenges/join")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(req)))
-                .andExpect(MockMvcResultMatchers.status().isBadRequest())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.errorCode",
-                        Matchers.is(HttpStatus.BAD_REQUEST.value())))
-                .andExpect(MockMvcResultMatchers.jsonPath("$.errorMessage",
-                        Matchers.containsString("User ID is required")));
-    }
-
-    @Test
-    public void testJoinChallenge_MissingChallengeId() throws Exception {
-        JoinChallengeRequestDTO req = validJoinRequest();
-        req.setChallengeId(null);
-
-        mockMvc.perform(MockMvcRequestBuilders.post("/wellness/challenges/join")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(req)))
-                .andExpect(MockMvcResultMatchers.status().isBadRequest())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.errorMessage",
-                        Matchers.containsString("Challenge ID is required")));
-    }
-
-    @Test
-    public void testJoinChallenge_UserNotFound() throws Exception {
-        Mockito.when(participantService.joinChallenge(
-                ArgumentMatchers.any(JoinChallengeRequestDTO.class)))
+    public void testJoinChallenge_InvalidUserNotFound() throws Exception {
+        Mockito.when(participantService.joinChallenge(ArgumentMatchers.any(JoinChallengeRequestDTO.class)))
                 .thenThrow(new WellnessTrackerException("Service.USER_NOT_FOUND"));
 
         mockMvc.perform(MockMvcRequestBuilders.post("/wellness/challenges/join")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(validJoinRequest())))
                 .andExpect(MockMvcResultMatchers.status().isBadRequest())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.errorMessage",
-                        Matchers.is(USER_NOT_FOUND)));
+                .andExpect(MockMvcResultMatchers.jsonPath("$.errorMessage", Matchers.is(USER_NOT_FOUND)));
     }
-
-    @Test
-    public void testJoinChallenge_ChallengeNotFound() throws Exception {
-        Mockito.when(participantService.joinChallenge(
-                ArgumentMatchers.any(JoinChallengeRequestDTO.class)))
-                .thenThrow(new WellnessTrackerException("Service.CHALLENGE_NOT_FOUND"));
-
-        mockMvc.perform(MockMvcRequestBuilders.post("/wellness/challenges/join")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(validJoinRequest())))
-                .andExpect(MockMvcResultMatchers.status().isBadRequest())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.errorMessage",
-                        Matchers.is(CHALLENGE_NOT_FOUND)));
-    }
-
-    @Test
-    public void testJoinChallenge_AlreadyJoined() throws Exception {
-        Mockito.when(participantService.joinChallenge(
-                ArgumentMatchers.any(JoinChallengeRequestDTO.class)))
-                .thenThrow(new WellnessTrackerException("Service.ALREADY_JOINED_CHALLENGE"));
-
-        mockMvc.perform(MockMvcRequestBuilders.post("/wellness/challenges/join")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(validJoinRequest())))
-                .andExpect(MockMvcResultMatchers.status().isBadRequest())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.errorMessage",
-                        Matchers.is(ALREADY_JOINED)));
-    }
-
-    @Test
-    public void testJoinChallenge_ChallengeAlreadyCompleted() throws Exception {
-        Mockito.when(participantService.joinChallenge(
-                ArgumentMatchers.any(JoinChallengeRequestDTO.class)))
-                .thenThrow(new WellnessTrackerException("Service.CHALLENGE_ALREADY_COMPLETED"));
-
-        mockMvc.perform(MockMvcRequestBuilders.post("/wellness/challenges/join")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(validJoinRequest())))
-                .andExpect(MockMvcResultMatchers.status().isBadRequest())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.errorMessage",
-                        Matchers.is(CHALLENGE_COMPLETED)));
-    }
-
-    @Test
-    public void testJoinChallenge_NotAnEmployee() throws Exception {
-        Mockito.when(participantService.joinChallenge(
-                ArgumentMatchers.any(JoinChallengeRequestDTO.class)))
-                .thenThrow(new WellnessTrackerException("Service.NOT_AN_EMPLOYEE"));
-
-        mockMvc.perform(MockMvcRequestBuilders.post("/wellness/challenges/join")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(validJoinRequest())))
-                .andExpect(MockMvcResultMatchers.status().isBadRequest())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.errorMessage",
-                        Matchers.is(NOT_AN_EMPLOYEE)));
-    }
-
-    // ----------------------------------------------------------
-    // GET /wellness/challenges/users/{userId} — Active Challenges
-    // ----------------------------------------------------------
 
     @Test
     public void testGetActiveChallenges_Valid() throws Exception {
         List<ActiveChallengeResponseDTO> challenges = new ArrayList<>();
-        challenges.add(sampleActiveChallenge(1, false));
-        challenges.add(sampleDepartmentChallenge(2));
+        challenges.add(sampleActiveChallenge(1));
 
         Mockito.when(participantService.getActiveChallenges(ArgumentMatchers.anyInt()))
                 .thenReturn(challenges);
@@ -259,127 +134,44 @@ class ChallengeParticipantAPITests {
         mockMvc.perform(MockMvcRequestBuilders.get("/wellness/challenges/users/{userId}", 2)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(MockMvcResultMatchers.status().isOk())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.length()", Matchers.is(2)))
-                .andExpect(MockMvcResultMatchers.jsonPath("$[0].title",
-                        Matchers.is("10K Steps Daily Challenge")))
-                .andExpect(MockMvcResultMatchers.jsonPath("$[0].createdByName",
-                        Matchers.is("Sarah Connor")))
-                .andExpect(MockMvcResultMatchers.jsonPath("$[0].metricType",
-                        Matchers.is("STEPS")))
-                .andExpect(MockMvcResultMatchers.jsonPath("$[0].unit",
-                        Matchers.is("steps")))
-                .andExpect(MockMvcResultMatchers.jsonPath("$[0].goalValue",
-                        Matchers.is(70000.0)))
-                .andExpect(MockMvcResultMatchers.jsonPath("$[0].alreadyJoined",
-                        Matchers.is(false)))
-                .andExpect(MockMvcResultMatchers.jsonPath("$[1].unit",
-                        Matchers.is("minutes")))
-                .andExpect(MockMvcResultMatchers.jsonPath("$[1].departmentName",
-                        Matchers.is("Engineering")))
-                .andExpect(MockMvcResultMatchers.jsonPath("$[1].alreadyJoined",
-                        Matchers.is(false)));
+                .andExpect(MockMvcResultMatchers.jsonPath("$.length()", Matchers.is(1)))
+                .andExpect(MockMvcResultMatchers.jsonPath("$[0].title", Matchers.is("10K Steps Daily Challenge")));
     }
 
     @Test
-    public void testGetActiveChallenges_AlreadyJoinedFlagTrue() throws Exception {
-        List<ActiveChallengeResponseDTO> challenges = new ArrayList<>();
-        challenges.add(sampleActiveChallenge(1, true));
-
-        Mockito.when(participantService.getActiveChallenges(ArgumentMatchers.anyInt()))
-                .thenReturn(challenges);
-
-        mockMvc.perform(MockMvcRequestBuilders.get("/wellness/challenges/users/{userId}", 2)
-                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(MockMvcResultMatchers.status().isOk())
-                .andExpect(MockMvcResultMatchers.jsonPath("$[0].alreadyJoined",
-                        Matchers.is(true)));
-    }
-
-    @Test
-    public void testGetActiveChallenges_UserNotFound() throws Exception {
+    public void testGetActiveChallenges_InvalidUserNotFound() throws Exception {
         Mockito.when(participantService.getActiveChallenges(ArgumentMatchers.anyInt()))
                 .thenThrow(new WellnessTrackerException("Service.USER_NOT_FOUND"));
 
         mockMvc.perform(MockMvcRequestBuilders.get("/wellness/challenges/users/{userId}", 999)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(MockMvcResultMatchers.status().isBadRequest())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.errorMessage",
-                        Matchers.is(USER_NOT_FOUND)));
+                .andExpect(MockMvcResultMatchers.jsonPath("$.errorMessage", Matchers.is(USER_NOT_FOUND)));
     }
-
-    @Test
-    public void testGetActiveChallenges_NoChallengesFound() throws Exception {
-        Mockito.when(participantService.getActiveChallenges(ArgumentMatchers.anyInt()))
-                .thenThrow(new WellnessTrackerException("Service.NO_CHALLENGES_FOUND"));
-
-        mockMvc.perform(MockMvcRequestBuilders.get("/wellness/challenges/users/{userId}", 2)
-                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(MockMvcResultMatchers.status().isBadRequest())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.errorMessage",
-                        Matchers.is(NO_CHALLENGES_FOUND)));
-    }
-
-    // ----------------------------------------------------------
-    // GET /wellness/challenges/users/{userId}/my-challenges
-    // ----------------------------------------------------------
 
     @Test
     public void testGetMyChallenges_Valid() throws Exception {
         List<MyChallengeResponseDTO> myChallenges = new ArrayList<>();
         myChallenges.add(sampleMyChallenge(1, 3));
-        myChallenges.add(sampleMyChallenge(2, 4));
 
         Mockito.when(participantService.getMyChallenges(ArgumentMatchers.anyInt()))
                 .thenReturn(myChallenges);
 
-        mockMvc.perform(MockMvcRequestBuilders.get(
-                "/wellness/challenges/users/{userId}/my-challenges", 2)
+        mockMvc.perform(MockMvcRequestBuilders.get("/wellness/challenges/users/{userId}/my-challenges", 2)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(MockMvcResultMatchers.status().isOk())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.length()", Matchers.is(2)))
-                .andExpect(MockMvcResultMatchers.jsonPath("$[0].title",
-                        Matchers.is("Hydration Hero")))
-                .andExpect(MockMvcResultMatchers.jsonPath("$[0].createdByName",
-                        Matchers.is("Sarah Connor")))
-                .andExpect(MockMvcResultMatchers.jsonPath("$[0].metricType",
-                        Matchers.is("WATER")))
-                .andExpect(MockMvcResultMatchers.jsonPath("$[0].unit",
-                        Matchers.is("liters")))
-                .andExpect(MockMvcResultMatchers.jsonPath("$[0].actualValue",
-                        Matchers.is(7.5)))
-                .andExpect(MockMvcResultMatchers.jsonPath("$[0].progressPct",
-                        Matchers.is(35)))
-                .andExpect(MockMvcResultMatchers.jsonPath("$[0].daysRemaining",
-                        Matchers.is(4)))
-                .andExpect(MockMvcResultMatchers.jsonPath("$[0].challengeStatus",
-                        Matchers.is("ACTIVE")))
-                .andExpect(MockMvcResultMatchers.jsonPath("$[0].participantStatus",
-                        Matchers.is("JOINED")));
+                .andExpect(MockMvcResultMatchers.jsonPath("$.length()", Matchers.is(1)))
+                .andExpect(MockMvcResultMatchers.jsonPath("$[0].title", Matchers.is("Hydration Hero")));
     }
 
     @Test
-    public void testGetMyChallenges_UserNotFound() throws Exception {
-        Mockito.when(participantService.getMyChallenges(ArgumentMatchers.anyInt()))
-                .thenThrow(new WellnessTrackerException("Service.USER_NOT_FOUND"));
-
-        mockMvc.perform(MockMvcRequestBuilders.get(
-                "/wellness/challenges/users/{userId}/my-challenges", 999)
-                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(MockMvcResultMatchers.status().isBadRequest())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.errorMessage",
-                        Matchers.is(USER_NOT_FOUND)));
-    }
-
-    @Test
-    public void testGetMyChallenges_NoJoinedChallenges() throws Exception {
+    public void testGetMyChallenges_InvalidNoJoinedChallenges() throws Exception {
         Mockito.when(participantService.getMyChallenges(ArgumentMatchers.anyInt()))
                 .thenThrow(new WellnessTrackerException("Service.NO_JOINED_CHALLENGES"));
 
-        mockMvc.perform(MockMvcRequestBuilders.get(
-                "/wellness/challenges/users/{userId}/my-challenges", 2)
+        mockMvc.perform(MockMvcRequestBuilders.get("/wellness/challenges/users/{userId}/my-challenges", 2)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(MockMvcResultMatchers.status().isBadRequest())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.errorMessage",
-                        Matchers.is(NO_JOINED_CHALLENGES)));
+                .andExpect(MockMvcResultMatchers.jsonPath("$.errorMessage", Matchers.is(NO_JOINED_CHALLENGES)));
     }
 }

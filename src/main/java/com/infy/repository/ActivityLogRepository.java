@@ -8,6 +8,7 @@ import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 
 import com.infy.entity.ActivityLog;
+import com.infy.enums.ActivityType;
 
 public interface ActivityLogRepository extends CrudRepository<ActivityLog, Integer>{
 	
@@ -50,4 +51,18 @@ public interface ActivityLogRepository extends CrudRepository<ActivityLog, Integ
 			@Param("userId") Integer userId,
 			@Param("fromDate") LocalDate fromDate,
 			@Param("toDate") LocalDate toDate);
+	
+    // US 04 - batch fetch actuals for ALL participants of a challenge in one query
+    // Returns: [userId, totalValue] filtered by a specific activityType
+    @Query("SELECT a.user.userId, SUM(a.activityValue) " +
+           "FROM ActivityLog a " +
+           "WHERE a.user.userId IN :userIds " +
+           "AND a.activityType = :activityType " +
+           "AND a.activityDate BETWEEN :fromDate AND :toDate " +
+           "GROUP BY a.user.userId")
+    List<Object[]> findActualsByUsersAndDateRangeAndType(
+            @Param("userIds") List<Integer> userIds,
+            @Param("activityType") ActivityType activityType,
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate);
 }

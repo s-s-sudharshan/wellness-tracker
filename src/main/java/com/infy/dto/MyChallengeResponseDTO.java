@@ -29,7 +29,7 @@ public class MyChallengeResponseDTO {
     private Difficulty difficulty;
     private LocalDate startDate;
     private LocalDate endDate;
-    private Integer daysRemaining;   // negative = ended, 0 = ends today, positive = days left
+    private Integer daysRemaining;   // 0 = ends today, positive = days left
     private ChallengeStatus challengeStatus;
 
     // Progress — calculated live from activity_logs

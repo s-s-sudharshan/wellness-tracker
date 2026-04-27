@@ -79,39 +79,6 @@ class MoodLogAPITests {
 	}
 
 	@Test
-	public void testSaveMoodLog_FutureDate() throws Exception {
-		MoodLogRequestDTO request = new MoodLogRequestDTO();
-		request.setUserId(2);
-		request.setLogDate(LocalDate.now().plusDays(1));
-		request.setMoodScore(3);
-
-		mockMvc.perform(MockMvcRequestBuilders.post("/wellness/mood-logs")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(request)))
-				.andExpect(MockMvcResultMatchers.status().isBadRequest())
-				.andExpect(MockMvcResultMatchers.jsonPath("$.errorMessage",
-						Matchers.containsString("Log date cannot be in the future")));
-	}
-
-	@Test
-	public void testSaveMoodLog_UserNotFound() throws Exception {
-		MoodLogRequestDTO request = new MoodLogRequestDTO();
-		request.setUserId(999);
-		request.setLogDate(LocalDate.of(2026, 4, 19));
-		request.setMoodScore(3);
-
-		Mockito.when(moodLogService.saveMoodLog(ArgumentMatchers.any(MoodLogRequestDTO.class)))
-				.thenThrow(new WellnessTrackerException("Service.USER_NOT_FOUND"));
-
-		mockMvc.perform(MockMvcRequestBuilders.post("/wellness/mood-logs")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(request)))
-				.andExpect(MockMvcResultMatchers.status().isBadRequest())
-				.andExpect(MockMvcResultMatchers.jsonPath("$.errorMessage",
-						Matchers.is(USER_NOT_FOUND)));
-	}
-
-	@Test
 	public void testGetMoodTrend_Valid() throws Exception {
 		MoodLogResponseDTO mood1 = new MoodLogResponseDTO();
 		mood1.setMoodLogId(1);

@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.infy.dto.ActiveChallengeResponseDTO;
@@ -55,14 +56,17 @@ public class ChallengeAPI {
         return new ResponseEntity<>(challenges, HttpStatus.OK);
     }
 
-    // US 13 / US 03 (prep) - Get a single challenge by ID
-    @GetMapping(value = "/challenges/{challengeId}")
-    public ResponseEntity<ChallengeResponseDTO> getChallengeById(
-            @PathVariable Integer challengeId)
-            throws WellnessTrackerException {
-        ChallengeResponseDTO challenge = challengeService.getChallengeById(challengeId);
-        return new ResponseEntity<>(challenge, HttpStatus.OK);
-    }
+	 // US 13 / US 03 - Get a single challenge by ID
+	 // requestingUserId enforces visibility — DEPARTMENT challenges blocked for cross-dept users
+	 @GetMapping(value = "/challenges/{challengeId}")
+	 public ResponseEntity<ChallengeResponseDTO> getChallengeById(
+	         @PathVariable Integer challengeId,
+	         @RequestParam Integer requestingUserId)
+	         throws WellnessTrackerException {
+	     ChallengeResponseDTO challenge = challengeService.getChallengeById(
+	             challengeId, requestingUserId);
+	     return new ResponseEntity<>(challenge, HttpStatus.OK);
+	 }
 
     // US 03 - Get all active/upcoming challenges visible to a user
     @GetMapping(value = "/challenges/users/{userId}")

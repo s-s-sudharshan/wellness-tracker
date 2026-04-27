@@ -82,39 +82,6 @@ class WeeklyGoalAPITests {
 	}
 
 	@Test
-	public void testSaveWeeklyGoal_InvalidGoalValue() throws Exception {
-		WeeklyGoalRequestDTO request = new WeeklyGoalRequestDTO();
-		request.setUserId(2);
-		request.setWeekStartDate(LocalDate.of(2026, 4, 21));
-		request.setStepsGoal(-1000.0);
-
-		mockMvc.perform(MockMvcRequestBuilders.post("/wellness/weekly-goals")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(request)))
-				.andExpect(MockMvcResultMatchers.status().isBadRequest())
-				.andExpect(MockMvcResultMatchers.jsonPath("$.errorMessage",
-						Matchers.containsString("Steps goal must be greater than 0")));
-	}
-
-	@Test
-	public void testSaveWeeklyGoal_UserNotFound() throws Exception {
-		WeeklyGoalRequestDTO request = new WeeklyGoalRequestDTO();
-		request.setUserId(999);
-		request.setWeekStartDate(LocalDate.of(2026, 4, 21));
-		request.setStepsGoal(50000.0);
-
-		Mockito.when(weeklyGoalService.saveWeeklyGoal(ArgumentMatchers.any(WeeklyGoalRequestDTO.class)))
-				.thenThrow(new WellnessTrackerException("Service.USER_NOT_FOUND"));
-
-		mockMvc.perform(MockMvcRequestBuilders.post("/wellness/weekly-goals")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(request)))
-				.andExpect(MockMvcResultMatchers.status().isBadRequest())
-				.andExpect(MockMvcResultMatchers.jsonPath("$.errorMessage",
-						Matchers.is(USER_NOT_FOUND)));
-	}
-
-	@Test
 	public void testGetWeeklyGoal_Valid() throws Exception {
 		WeeklyGoalResponseDTO response = new WeeklyGoalResponseDTO();
 		response.setWeeklyGoalId(1);

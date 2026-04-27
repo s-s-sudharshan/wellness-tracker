@@ -85,6 +85,11 @@ public class ActivityLogServiceImpl implements ActivityLogService {
 			throw new WellnessTrackerException("Service.USER_NOT_FOUND");
 		}
 		
+        // Fix 4: Validate date range — same guard as mood log APIs
+        if (fromDate.isAfter(toDate)) {
+            throw new WellnessTrackerException("Service.INVALID_DATE_RANGE");
+        }
+		
 		Integer totalActivities = activityLogRepository
 				.countByUser_UserIdAndActivityDateBetween(userId, fromDate, toDate);
 		
