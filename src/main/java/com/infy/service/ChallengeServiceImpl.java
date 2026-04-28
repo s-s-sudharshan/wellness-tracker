@@ -9,11 +9,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.infy.dto.ActiveChallengeResponseDTO;
 import com.infy.dto.ChallengeRequestDTO;
 import com.infy.dto.ChallengeResponseDTO;
 import com.infy.entity.Challenge;
 import com.infy.entity.Department;
 import com.infy.entity.User;
+import com.infy.enums.ActivityType;
 import com.infy.enums.ChallengeStatus;
 import com.infy.enums.Role;
 import com.infy.enums.VisibilityType;
@@ -59,7 +61,7 @@ public class ChallengeServiceImpl implements ChallengeService {
             throw new WellnessTrackerException("Service.INVALID_CHALLENGE_DATES");
         }
 
-        // Fix 2: Enforce visibility vs department consistency
+        // Enforce visibility vs department consistency
         if (requestDTO.getVisibilityType() == VisibilityType.DEPARTMENT
                 && requestDTO.getDepartmentId() == null) {
             throw new WellnessTrackerException("Service.DEPARTMENT_REQUIRED_FOR_VISIBILITY");
@@ -101,7 +103,7 @@ public class ChallengeServiceImpl implements ChallengeService {
     @Transactional(readOnly = false)
     public List<ChallengeResponseDTO> getChallengesByManager(Integer managerId)
             throws WellnessTrackerException {
-        // Fix 3: Validate user exists and is a MANAGER
+        // Validate user exists and is a MANAGER
         Optional<User> optional = userRepository.findById(managerId);
         User manager = optional.orElseThrow(
                 () -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
@@ -173,6 +175,49 @@ public class ChallengeServiceImpl implements ChallengeService {
 
         return mapToDTO(challenge);
     }
+    
+    // US 07 - Return featured, non-expired challenges visible to the user's department
+    @Override
+    @Transactional(readOnly = false)
+    public List<ActiveChallengeResponseDTO> getFeaturedChallenges(Integer userId)
+            throws WellnessTrackerException {
+        Optional<User> userOptional = userRepository.findById(userId);
+        User user = userOptional.orElseThrow(
+                () -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
+ 
+        // HR users cannot see the challenge catalog or featured challenges since they cannot join
+        if (user.getRole().equals(Role.HR)) {
+            throw new WellnessTrackerException("Service.NOT_AN_EMPLOYEE");
+        }
+ 
+        // Sync DB statuses before reading so status field in response is accurate
+        statusSyncService.syncStatuses();
+ 
+        List<Challenge> featured = challengeRepository.findFeaturedChallengesForDepartment(
+                LocalDate.now(), user.getDepartment().getDepartmentId());
+ 
+        if (featured.isEmpty()) {
+            throw new WellnessTrackerException("Service.NO_FEATURED_CHALLENGES_FOUND");
+        }
+ 
+        // Batch-fetch alreadyJoined status for all featured challenges in one query
+        List<Integer> challengeIds = new ArrayList<>();
+        for (Challenge c : featured) {
+            challengeIds.add(c.getChallengeId());
+        }
+ 
+        List<Integer> joinedIds = participantRepository
+                .findJoinedChallengeIdsByUser(userId, challengeIds);
+ 
+        List<ActiveChallengeResponseDTO> responseList = new ArrayList<>();
+        for (Challenge c : featured) {
+            ActiveChallengeResponseDTO dto = mapToActiveDTO(c);
+            dto.setAlreadyJoined(joinedIds.contains(c.getChallengeId()));
+            responseList.add(dto);
+        }
+ 
+        return responseList;
+    }
 
     // Derives current status purely from dates — used at creation time
     private ChallengeStatus resolveStatus(LocalDate startDate, LocalDate endDate) {
@@ -204,5 +249,37 @@ public class ChallengeServiceImpl implements ChallengeService {
             dto.setDepartmentName(c.getDepartment().getDepartmentName());
         }
         return dto;
+    }
+    
+    private ActiveChallengeResponseDTO mapToActiveDTO(Challenge c) {
+        ActiveChallengeResponseDTO dto = new ActiveChallengeResponseDTO();
+        dto.setChallengeId(c.getChallengeId());
+        dto.setTitle(c.getTitle());
+        dto.setDescription(c.getDescription());
+        dto.setCreatedByName(
+                c.getCreatedBy().getFirstName() + " " + c.getCreatedBy().getLastName());
+        dto.setMetricType(c.getMetricType());
+        dto.setUnit(resolveUnit(c.getMetricType()));
+        dto.setGoalValue(c.getGoalValue());
+        dto.setDifficulty(c.getDifficulty());
+        dto.setStartDate(c.getStartDate());
+        dto.setEndDate(c.getEndDate());
+        dto.setIsFeatured(c.getIsFeatured());
+        dto.setStatus(c.getStatus());
+        if (c.getDepartment() != null) {
+            dto.setDepartmentName(c.getDepartment().getDepartmentName());
+        }
+        return dto;
+    }
+ 
+    private String resolveUnit(ActivityType metricType) {
+        return switch (metricType) {
+            case STEPS      -> "steps";
+            case WORKOUT    -> "minutes";
+            case MEDITATION -> "minutes";
+            case WATER      -> "liters";
+            case SLEEP      -> "hours";
+            case OTHER      -> "units";
+        };
     }
 }

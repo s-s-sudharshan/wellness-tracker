@@ -26,6 +26,20 @@ public interface ChallengeRepository extends CrudRepository<Challenge, Integer> 
     List<Challenge> findVisibleChallengesForDepartment(
             @Param("today") LocalDate today,
             @Param("deptId") Integer deptId);
+    
+    // US 07 - Featured challenges visible to a user's department, non-expired
+    // Same visibility rules as the catalog query — COMPANY_WIDE or same-department DEPARTMENT
+    // isFeatured = true and endDate >= today ensure only relevant, live featured challenges appear
+    @Query("SELECT c FROM Challenge c " +
+           "WHERE c.isFeatured = true " +
+           "AND c.endDate >= :today " +
+           "AND (c.visibilityType = 'COMPANY_WIDE' " +
+           "OR (c.visibilityType = 'DEPARTMENT' " +
+           "    AND c.department.departmentId = :deptId)) " +
+           "ORDER BY c.startDate ASC")
+    List<Challenge> findFeaturedChallengesForDepartment(
+            @Param("today") LocalDate today,
+            @Param("deptId") Integer deptId);
 
     // US 04 - All challenges for leaderboard (no status filter needed)
     // Already covered by CrudRepository.findById()

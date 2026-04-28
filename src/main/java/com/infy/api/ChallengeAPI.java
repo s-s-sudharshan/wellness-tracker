@@ -76,6 +76,15 @@ public class ChallengeAPI {
         List<ActiveChallengeResponseDTO> challenges = participantService.getActiveChallenges(userId);
         return new ResponseEntity<>(challenges, HttpStatus.OK);
     }
+    
+    // US 07 - Get featured challenges visible to a user
+    @GetMapping(value = "/challenges/users/{userId}/featured")
+    public ResponseEntity<List<ActiveChallengeResponseDTO>> getFeaturedChallenges(
+            @PathVariable Integer userId)
+            throws WellnessTrackerException {
+        List<ActiveChallengeResponseDTO> featured = challengeService.getFeaturedChallenges(userId);
+        return new ResponseEntity<>(featured, HttpStatus.OK);
+    }
 
     // US 03 - Employee joins a challenge
     @PostMapping(value = "/challenges/join")
