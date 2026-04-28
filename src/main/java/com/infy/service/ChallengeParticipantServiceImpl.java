@@ -21,6 +21,7 @@ import com.infy.entity.User;
 import com.infy.enums.ActivityType;
 import com.infy.enums.ChallengeStatus;
 import com.infy.enums.Role;
+import com.infy.enums.VisibilityType;
 import com.infy.exception.WellnessTrackerException;
 import com.infy.repository.ActivityLogRepository;
 import com.infy.repository.ChallengeParticipantRepository;
@@ -49,7 +50,7 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
     @Override
     public Integer joinChallenge(JoinChallengeRequestDTO requestDTO)
             throws WellnessTrackerException {
-        // Validate user exists
+
         Optional<User> userOptional = userRepository.findById(requestDTO.getUserId());
         User user = userOptional.orElseThrow(
                 () -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
@@ -59,7 +60,6 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
             throw new WellnessTrackerException("Service.NOT_AN_EMPLOYEE");
         }
 
-        // Validate challenge exists
         Optional<Challenge> challengeOptional = challengeRepository.findById(
                 requestDTO.getChallengeId());
         Challenge challenge = challengeOptional.orElseThrow(
@@ -70,6 +70,33 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
         if (LocalDate.now().isAfter(challenge.getEndDate())
                 || challenge.getStatus().equals(ChallengeStatus.COMPLETED)) {
             throw new WellnessTrackerException("Service.CHALLENGE_ALREADY_COMPLETED");
+        }
+
+        // P1 Fix: Enforce department visibility on join, consistent with getChallengeById.
+        //
+        // getChallengeById allows: same-department OR creator OR existing participant.
+        // joinChallenge previously only allowed same-department, which meant the manager
+        // who created a DEPARTMENT challenge could not join their own challenge.
+        //
+        // Policy aligned to: same-department OR creator.
+        // "Existing participant" exception is not needed here — if they are already a
+        // participant the duplicate-join check below will handle it gracefully.
+        if (challenge.getVisibilityType().equals(VisibilityType.DEPARTMENT)) {
+            Integer challengeDeptId = challenge.getDepartment() != null
+                    ? challenge.getDepartment().getDepartmentId()
+                    : null;
+            Integer userDeptId = user.getDepartment() != null
+                    ? user.getDepartment().getDepartmentId()
+                    : null;
+
+            boolean inSameDepartment = challengeDeptId != null
+                    && challengeDeptId.equals(userDeptId);
+            boolean isCreator = challenge.getCreatedBy().getUserId()
+                    .equals(requestDTO.getUserId());
+
+            if (!inSameDepartment && !isCreator) {
+                throw new WellnessTrackerException("Service.CHALLENGE_ACCESS_DENIED");
+            }
         }
 
         // Check if user already joined this challenge
@@ -95,8 +122,7 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
         User user = userOptional.orElseThrow(
                 () -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
 
-        // US03 P1 Fix 1 — role guard consistent with joinChallenge
-        // HR users should not see the challenge catalog since they cannot join
+        // HR users cannot see the challenge catalog since they cannot join
         if (user.getRole().equals(Role.HR)) {
             throw new WellnessTrackerException("Service.NOT_AN_EMPLOYEE");
         }
@@ -192,8 +218,7 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
 
             int progressPct = calcPct(actualValue, c.getGoalValue());
 
-            // US03 P1 Fix 2 — derive status live from dates instead of reading stale DB column
-            // syncStatuses() above keeps DB accurate, but this is a belt-and-suspenders guard
+            // Derive status live from dates instead of reading stale DB column
             ChallengeStatus liveStatus = resolveStatus(c.getStartDate(), c.getEndDate());
 
             // daysRemaining: clamped to 0 for ended challenges (never negative in My Challenges)
@@ -216,7 +241,7 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
             dto.setStartDate(c.getStartDate());
             dto.setEndDate(c.getEndDate());
             dto.setDaysRemaining(daysRemaining);
-            dto.setChallengeStatus(liveStatus);   // always accurate — derived from dates
+            dto.setChallengeStatus(liveStatus);
             dto.setActualValue(actualValue);
             dto.setProgressPct(progressPct);
 
@@ -248,7 +273,6 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
         dto.setStartDate(c.getStartDate());
         dto.setEndDate(c.getEndDate());
         dto.setIsFeatured(c.getIsFeatured());
-        // Status is accurate here because syncStatuses() runs before mapToActiveDTO is called
         dto.setStatus(c.getStatus());
         if (c.getDepartment() != null) {
             dto.setDepartmentName(c.getDepartment().getDepartmentName());

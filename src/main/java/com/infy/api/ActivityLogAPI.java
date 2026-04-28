@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.infy.dto.ActivityLogRequestDTO;
 import com.infy.dto.ActivityLogResponseDTO;
 import com.infy.dto.ActivitySummaryDTO;
+import com.infy.dto.ActivityTrendPointDTO;
+import com.infy.enums.ActivityType;
 import com.infy.exception.WellnessTrackerException;
 import com.infy.service.ActivityLogService;
 
@@ -60,5 +62,19 @@ public class ActivityLogAPI {
 			throws WellnessTrackerException {
 		ActivitySummaryDTO summary = activityService.getActivitySummary(userId, fromDate, toDate);
 		return new ResponseEntity<>(summary, HttpStatus.OK);
+	}
+	
+	// US 02 - Get day-wise activity trend for charts
+	// metricType is optional — omit to get all types, provide to filter to one type
+	@GetMapping(value = "/activity-logs/users/{userId}/trend")
+	public ResponseEntity<List<ActivityTrendPointDTO>> getActivityTrend(
+	        @PathVariable Integer userId,
+	        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+	        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+	        @RequestParam(required = false) ActivityType metricType)
+	        throws WellnessTrackerException {
+	    List<ActivityTrendPointDTO> trend = activityService.getActivityTrend(
+	            userId, fromDate, toDate, metricType);
+	    return new ResponseEntity<>(trend, HttpStatus.OK);
 	}
 }

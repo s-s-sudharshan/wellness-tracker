@@ -30,6 +30,20 @@ public interface ActivityLogRepository extends CrudRepository<ActivityLog, Integ
 	Integer countByUser_UserIdAndActivityDateBetween(
 			Integer userId, LocalDate fromDate, LocalDate toDate);
 	
+	// US 02 - Day-wise trend points for a user, optionally filtered by activity type.
+	// When metricType is null the caller filters in Java; the query always returns all types
+	// so the same JPQL works for both the filtered and unfiltered cases.
+	@Query("SELECT a.activityDate, a.activityType, SUM(a.activityValue), a.unit " +
+	       "FROM ActivityLog a " +
+	       "WHERE a.user.userId = :userId " +
+	       "AND a.activityDate BETWEEN :fromDate AND :toDate " +
+	       "GROUP BY a.activityDate, a.activityType, a.unit " +
+	       "ORDER BY a.activityDate ASC")
+	List<Object[]> findTrendByUserAndDateRange(
+	        @Param("userId") Integer userId,
+	        @Param("fromDate") LocalDate fromDate,
+	        @Param("toDate") LocalDate toDate);
+	
 	// US 11 - sum actuals per activity type for weekly progress
 	@Query("SELECT a.activityType, SUM(a.activityValue) " +
 		   "FROM ActivityLog a " +

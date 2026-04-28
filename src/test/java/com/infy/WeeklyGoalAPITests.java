@@ -39,7 +39,7 @@ class WeeklyGoalAPITests {
 	private WeeklyGoalService weeklyGoalService;
 
 	private static final String WEEKLY_GOAL_SUCCESS = "Weekly goal saved successfully. Weekly Goal ID: ";
-	private static final String USER_NOT_FOUND = "User not found. Please provide a valid user ID.";
+	//private static final String USER_NOT_FOUND = "User not found. Please provide a valid user ID.";
 	private static final String WEEKLY_GOAL_NOT_FOUND = "No weekly goal found for the given user and week.";
 
 	@Test
