@@ -15,17 +15,19 @@ import com.infy.dto.RecommendationResponseDTO;
 import com.infy.entity.Challenge;
 import com.infy.entity.Recommendation;
 import com.infy.entity.User;
+import com.infy.entity.WellnessArticle;
 import com.infy.enums.ActivityType;
 import com.infy.enums.ChallengeStatus;
 import com.infy.enums.RecommendationStatus;
 import com.infy.enums.RecommendationType;
-import com.infy.enums.Role;
+import com.infy.enums.WellnessArticleStatus;
 import com.infy.exception.WellnessTrackerException;
 import com.infy.repository.ActivityLogRepository;
 import com.infy.repository.ChallengeParticipantRepository;
 import com.infy.repository.ChallengeRepository;
 import com.infy.repository.RecommendationRepository;
 import com.infy.repository.UserRepository;
+import com.infy.repository.WellnessArticleRepository;
 
 @Service
 @Transactional
@@ -43,46 +45,6 @@ public class RecommendationServiceImpl implements RecommendationService {
     private static final int MAX_RECOMMENDATIONS = 5;
     private static final int MIN_RECOMMENDATIONS = 3;
 
-    // -------------------------------------------------------------------------
-    // Simple article value holder. URLs are guaranteed unique by the developer.
-    // -------------------------------------------------------------------------
-    private record Article(String title, String description, String url) {}
-
-    // Fallback articles — shown to highly active users or when no matching
-    // challenge exists for multiple metrics. URLs are developer-guaranteed unique.
-    private static final List<Article> FALLBACK_ARTICLES = List.of(
-        new Article(
-            "Your Weekly Wellness Review",
-            "Consistent logging is the first step toward lasting wellness habits. "
-            + "Check out our guide to building a balanced weekly routine.",
-            "https://www.who.int/news-room/fact-sheets/detail/physical-activity"
-        ),
-        new Article(
-            "The Science of Building Healthy Habits",
-            "Small daily actions compound into big results. Learn how habit stacking "
-            + "can help you embed wellness into your everyday routine.",
-            "https://www.healthline.com/health/how-to-build-healthy-habits"
-        ),
-        new Article(
-            "Why Tracking Your Activity Makes a Difference",
-            "Research shows that people who log their activity are significantly more "
-            + "likely to hit their wellness goals. Here is how to make it work for you.",
-            "https://www.healthline.com/nutrition/self-monitoring-health"
-        ),
-        new Article(
-            "Balancing Work and Wellbeing",
-            "High performers protect their recovery time as much as their work time. "
-            + "Explore practical strategies for maintaining balance at a demanding job.",
-            "https://www.mindful.org/how-to-make-mindfulness-a-habit/"
-        ),
-        new Article(
-            "Nutrition Basics for an Active Lifestyle",
-            "What you eat directly fuels your wellness activities. "
-            + "A simple primer on eating well without overhauling your entire diet.",
-            "https://www.healthline.com/nutrition/healthy-eating-tips"
-        )
-    );
-
     @Autowired
     private UserRepository userRepository;
 
@@ -99,6 +61,9 @@ public class RecommendationServiceImpl implements RecommendationService {
     private RecommendationRepository recommendationRepository;
 
     @Autowired
+    private WellnessArticleRepository articleRepository;
+
+    @Autowired
     private ChallengeStatusSyncService statusSyncService;
 
     // =========================================================================
@@ -109,19 +74,15 @@ public class RecommendationServiceImpl implements RecommendationService {
     public List<RecommendationResponseDTO> getRecommendations(Integer userId)
             throws WellnessTrackerException {
 
-        // --- Validate user and determine role capabilities ---
+        // --- Validate user ---
         Optional<User> userOptional = userRepository.findById(userId);
         User user = userOptional.orElseThrow(
                 () -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
 
-        // HR cannot join challenges — challenge branches are skipped for them.
-        // Article suggestions still apply (session feedback Section 3c).
-        // Role.HR.equals(...) is null-safe — avoids NPE if role is null in the DB.
-        boolean canJoinChallenges = !Role.HR.equals(user.getRole());
-
-        if (canJoinChallenges) {
-            statusSyncService.syncStatuses();
-        }
+        // All roles (EMPLOYEE, MANAGER, HR) now get challenge + article recommendations.
+        // HR can join COMPANY_WIDE and their own dept challenges, so challenge
+        // suggestions are relevant to them.
+        statusSyncService.syncStatuses();
 
         // --- Step 1: Gather 7-day activity totals ---
         LocalDate today   = LocalDate.now();
@@ -148,7 +109,7 @@ public class RecommendationServiceImpl implements RecommendationService {
         Integer userDeptId = user.getDepartment() != null
                 ? user.getDepartment().getDepartmentId() : null;
 
-        List<Challenge> visibleChallenges = (canJoinChallenges && userDeptId != null)
+        List<Challenge> visibleChallenges = userDeptId != null
                 ? challengeRepository.findVisibleChallengesForDepartment(today, userDeptId)
                 : new ArrayList<>();
 
@@ -169,7 +130,7 @@ public class RecommendationServiceImpl implements RecommendationService {
 
         // --- Step 4: Rule engine ---
         // One if block per metric, priority ordered. Each rule tries a matching
-        // challenge first and falls back to a paired article if none is available.
+        // challenge first, then a matching DB article, then a general DB article.
 
         // Rule 1 — Low hydration
         if (totalWater < LOW_WATER_LITERS) {
@@ -182,12 +143,7 @@ public class RecommendationServiceImpl implements RecommendationService {
                         "Your water intake this week is below the recommended level. "
                         + "Joining this challenge will help you build a daily hydration habit.");
             } else {
-                tryAddArticle(candidates, seenArticleUrls, user,
-                        "Boost Your Daily Water Intake",
-                        "You have logged less than 1.5 litres of water per day on average "
-                        + "this week. Read our tips on easy ways to stay hydrated throughout "
-                        + "the workday.",
-                        "https://www.healthline.com/nutrition/how-much-water-should-you-drink-per-day");
+                tryAddDbArticle(candidates, seenArticleUrls, user, ActivityType.WATER);
             }
         }
 
@@ -202,11 +158,7 @@ public class RecommendationServiceImpl implements RecommendationService {
                         "You are averaging fewer than 5,000 steps a day this week. "
                         + "This challenge will help you hit a healthy daily step target.");
             } else {
-                tryAddArticle(candidates, seenArticleUrls, user,
-                        "Simple Ways to Walk More Every Day",
-                        "Small changes like taking the stairs or a lunchtime walk can "
-                        + "significantly increase your daily step count.",
-                        "https://www.healthline.com/health/how-to-increase-steps-per-day");
+                tryAddDbArticle(candidates, seenArticleUrls, user, ActivityType.STEPS);
             }
         }
 
@@ -221,21 +173,13 @@ public class RecommendationServiceImpl implements RecommendationService {
                         "You have logged less than 60 minutes of workout this week. "
                         + "Even short sessions add up — this challenge is a great motivator.");
             } else {
-                tryAddArticle(candidates, seenArticleUrls, user,
-                        "Fitting Exercise Into a Busy Workday",
-                        "Short desk workouts and micro-breaks can deliver real fitness benefits "
-                        + "even when your schedule is packed.",
-                        "https://www.healthline.com/health/desk-exercises");
+                tryAddDbArticle(candidates, seenArticleUrls, user, ActivityType.WORKOUT);
             }
         }
 
-        // Rule 4 — Low sleep (article fires first, then challenge — sleep challenges are rare)
+        // Rule 4 — Low sleep (article fires first — sleep challenges are rare)
         if (totalSleep < LOW_SLEEP_HOURS && candidates.size() < MAX_RECOMMENDATIONS) {
-            tryAddArticle(candidates, seenArticleUrls, user,
-                    "Better Sleep for Better Performance",
-                    "You have averaged less than 6 hours of sleep per night this week. "
-                    + "Quality sleep is the foundation of physical and mental recovery.",
-                    "https://www.sleepfoundation.org/sleep-hygiene");
+            tryAddDbArticle(candidates, seenArticleUrls, user, ActivityType.SLEEP);
 
             if (candidates.size() < MAX_RECOMMENDATIONS) {
                 Challenge c = findBestChallenge(
@@ -261,18 +205,13 @@ public class RecommendationServiceImpl implements RecommendationService {
                         "Even 5 minutes of daily mindfulness can reduce stress and sharpen focus. "
                         + "Join this challenge to build the habit.");
             } else {
-                tryAddArticle(candidates, seenArticleUrls, user,
-                        "Getting Started with Workplace Mindfulness",
-                        "You have not logged much meditation this week. "
-                        + "This guide covers simple techniques that fit into any lunch break.",
-                        "https://www.mindful.org/meditation/mindfulness-getting-started/");
+                tryAddDbArticle(candidates, seenArticleUrls, user, ActivityType.MEDITATION);
             }
         }
 
         // --- Step 5: Padding ---
-        // Pass A — unjoinable visible challenges not yet surfaced by any rule,
-        //          sorted by relevance (featured → active → lowest metric ratio).
-        if (candidates.size() < MIN_RECOMMENDATIONS && canJoinChallenges) {
+        // Pass A — unjoinable visible challenges sorted by relevance
+        if (candidates.size() < MIN_RECOMMENDATIONS) {
             List<Challenge> paddingPool = buildPaddingPool(
                     visibleChallenges, joinedChallengeIds, seenChallengeIds,
                     totalWater, totalSteps, totalWorkout, totalMeditation, totalSleep);
@@ -287,15 +226,16 @@ public class RecommendationServiceImpl implements RecommendationService {
             }
         }
 
-        // Pass B — fallback articles until minimum is reached.
-        // URLs are developer-guaranteed unique, so tryAddArticle will never
-        // silently skip a fallback entry. Minimum is always reached.
-        int fallbackIndex = 0;
-        while (candidates.size() < MIN_RECOMMENDATIONS
-                && fallbackIndex < FALLBACK_ARTICLES.size()) {
-            Article a = FALLBACK_ARTICLES.get(fallbackIndex++);
-            tryAddArticle(candidates, seenArticleUrls, user,
-                    a.title(), a.description(), a.url());
+        // Pass B — general DB articles (relatedMetric IS NULL) until minimum is reached
+        if (candidates.size() < MIN_RECOMMENDATIONS) {
+            List<WellnessArticle> generalArticles = articleRepository
+                    .findGeneralPublishedArticles(WellnessArticleStatus.PUBLISHED);
+
+            for (WellnessArticle a : generalArticles) {
+                if (candidates.size() >= MIN_RECOMMENDATIONS) break;
+                tryAddArticle(candidates, seenArticleUrls, user,
+                        a.getTitle(), a.getDescription(), a.getArticleUrl());
+            }
         }
 
         // --- Step 6: Persist and return (single exit point) ---
@@ -336,6 +276,28 @@ public class RecommendationServiceImpl implements RecommendationService {
         seenArticleUrls.add(url);
     }
 
+    // Looks up the best published DB article for a given metric and adds it.
+    // Falls back gracefully — if no published article exists for this metric,
+    // nothing is added (the slot stays empty for padding to fill).
+    private void tryAddDbArticle(
+            List<Recommendation> candidates,
+            Set<String> seenArticleUrls,
+            User user,
+            ActivityType metric) {
+
+        List<WellnessArticle> articles = articleRepository
+                .findByRelatedMetricAndStatusOrderByCreatedAtDesc(
+                        metric, WellnessArticleStatus.PUBLISHED);
+
+        for (WellnessArticle a : articles) {
+            if (!seenArticleUrls.contains(a.getArticleUrl())) {
+                tryAddArticle(candidates, seenArticleUrls, user,
+                        a.getTitle(), a.getDescription(), a.getArticleUrl());
+                return; // one article per rule
+            }
+        }
+    }
+
     // =========================================================================
     // Challenge selection
     // =========================================================================
@@ -373,7 +335,6 @@ public class RecommendationServiceImpl implements RecommendationService {
     }
 
     // Builds the sorted padding pool (Pass A).
-    // Excludes joined and already-seen challenges.
     // Sort: featured first → ACTIVE before UPCOMING → lowest metric ratio first.
     private List<Challenge> buildPaddingPool(
             List<Challenge> visibleChallenges,
@@ -410,9 +371,6 @@ public class RecommendationServiceImpl implements RecommendationService {
         return pool;
     }
 
-    // Returns the user's actual as a ratio of the threshold for a given metric.
-    // 0.0 = no activity (highest padding priority). 1.0+ = threshold met (lowest).
-    // OTHER is treated as neutral so it sorts to the end of the padding pool.
     private double getMetricRatio(
             ActivityType type,
             double water, double steps, double workout,
@@ -428,7 +386,7 @@ public class RecommendationServiceImpl implements RecommendationService {
     }
 
     // =========================================================================
-    // Entity builders — baseRec handles the four shared fields
+    // Entity builders
     // =========================================================================
 
     private Recommendation baseRec(User user, RecommendationType type,
@@ -457,12 +415,7 @@ public class RecommendationServiceImpl implements RecommendationService {
     }
 
     // =========================================================================
-    // Persist and map — single exit point for every code path.
-    //
-    // Deletes existing ACTIVE recommendations before saving the new batch.
-    // DISMISSED recommendations are intentionally preserved (status filter in query).
-    // Delete-then-insert keeps logic simple — the rule engine always produces a
-    // fresh variable-length list, so diffing existing rows adds no value.
+    // Persist and map — single exit point for every code path
     // =========================================================================
 
     private List<RecommendationResponseDTO> persistAndReturn(
