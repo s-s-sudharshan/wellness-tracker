@@ -227,3 +227,70 @@ INSERT INTO challenges (title, description, created_by, metric_type, goal_value,
  'DEPARTMENT', 1, NULL, FALSE, 'COMPLETED');
  
  
+ -- Clear John's existing logs so thresholds are predictable
+DELETE FROM activity_logs WHERE user_id = 2;
+
+-- Steps: above threshold (35,000) — rule should NOT fire
+INSERT INTO activity_logs (user_id, activity_type, activity_date, activity_value, unit) VALUES
+(2, 'STEPS', CURDATE(),          12000, 'steps'),
+(2, 'STEPS', CURDATE() - INTERVAL 1 DAY, 11000, 'steps'),
+(2, 'STEPS', CURDATE() - INTERVAL 2 DAY, 10000, 'steps'),
+(2, 'STEPS', CURDATE() - INTERVAL 3 DAY,  9000, 'steps');
+
+-- Workout: above threshold (60 min) — rule should NOT fire
+INSERT INTO activity_logs (user_id, activity_type, activity_date, activity_value, unit) VALUES
+(2, 'WORKOUT', CURDATE(),          30, 'minutes'),
+(2, 'WORKOUT', CURDATE() - INTERVAL 1 DAY, 40, 'minutes');
+
+-- Sleep: above threshold (42 hrs) — rule should NOT fire
+INSERT INTO activity_logs (user_id, activity_type, activity_date, activity_value, unit) VALUES
+(2, 'SLEEP', CURDATE(),                      7, 'hours'),
+(2, 'SLEEP', CURDATE() - INTERVAL 1 DAY,    7, 'hours'),
+(2, 'SLEEP', CURDATE() - INTERVAL 2 DAY,    7, 'hours'),
+(2, 'SLEEP', CURDATE() - INTERVAL 3 DAY,    7, 'hours'),
+(2, 'SLEEP', CURDATE() - INTERVAL 4 DAY,    7, 'hours'),
+(2, 'SLEEP', CURDATE() - INTERVAL 5 DAY,    7, 'hours'),
+(2, 'SLEEP', CURDATE() - INTERVAL 6 DAY,    7, 'hours');
+
+
+--------------------------------
+-- Water: BELOW threshold (< 10 L) — Rule 1 SHOULD fire
+INSERT INTO activity_logs (-- Make John fully active so no rules fire at all
+DELETE FROM activity_logs WHERE user_id = 2;
+
+INSERT INTO activity_logs (user_id, activity_type, activity_date, activity_value, unit) VALUES
+(2, 'WATER',      CURDATE(),                      3.0, 'liters'),
+(2, 'WATER',      CURDATE() - INTERVAL 1 DAY,     3.0, 'liters'),
+(2, 'WATER',      CURDATE() - INTERVAL 2 DAY,     3.0, 'liters'),
+(2, 'WATER',      CURDATE() - INTERVAL 3 DAY,     3.0, 'liters'),
+(2, 'STEPS',      CURDATE(),                      10000, 'steps'),
+(2, 'STEPS',      CURDATE() - INTERVAL 1 DAY,     10000, 'steps'),
+(2, 'STEPS',      CURDATE() - INTERVAL 2 DAY,     10000, 'steps'),
+(2, 'STEPS',      CURDATE() - INTERVAL 3 DAY,     10000, 'steps'),
+(2, 'WORKOUT',    CURDATE(),                      35, 'minutes'),
+(2, 'WORKOUT',    CURDATE() - INTERVAL 1 DAY,     35, 'minutes'),
+(2, 'SLEEP',      CURDATE(),                      7.5, 'hours'),
+(2, 'SLEEP',      CURDATE() - INTERVAL 1 DAY,     7.5, 'hours'),
+(2, 'SLEEP',      CURDATE() - INTERVAL 2 DAY,     7.5, 'hours'),
+(2, 'SLEEP',      CURDATE() - INTERVAL 3 DAY,     7.5, 'hours'),
+(2, 'SLEEP',      CURDATE() - INTERVAL 4 DAY,     7.5, 'hours'),
+(2, 'SLEEP',      CURDATE() - INTERVAL 5 DAY,     7.5, 'hours'),
+(2, 'SLEEP',      CURDATE() - INTERVAL 6 DAY,     7.5, 'hours'),
+(2, 'MEDITATION', CURDATE(),                      20, 'minutes'),
+(2, 'MEDITATION', CURDATE() - INTERVAL 1 DAY,     15, 'minutes');
+
+user_id, activity_type, activity_date, activity_value, unit) VALUES
+(2, 'WATER', CURDATE(), 2.0, 'liters');
+
+-- Meditation: BELOW threshold (< 30 min) — Rule 5 SHOULD fire
+INSERT INTO activity_logs (user_id, activity_type, activity_date, activity_value, unit) VALUES
+(2, 'MEDITATION', CURDATE(), 10, 'minutes');
+
+----------------------
+
+DELETE FROM challenge_participants WHERE user_id IN (2, 3, 4, 5);
+DELETE FROM recommendations WHERE user_id IN (2, 3, 4, 5);
+DELETE FROM activity_logs WHERE user_id IN (2, 3, 4, 5);
+
+
+ 

@@ -4,9 +4,11 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -47,6 +49,7 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
     @Autowired
     private ChallengeStatusSyncService statusSyncService;
 
+    // US 03 - Employee or manager joins a challenge
     @Override
     public Integer joinChallenge(JoinChallengeRequestDTO requestDTO)
             throws WellnessTrackerException {
@@ -72,15 +75,10 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
             throw new WellnessTrackerException("Service.CHALLENGE_ALREADY_COMPLETED");
         }
 
-        // P1 Fix: Enforce department visibility on join, consistent with getChallengeById.
-        //
-        // getChallengeById allows: same-department OR creator OR existing participant.
-        // joinChallenge previously only allowed same-department, which meant the manager
-        // who created a DEPARTMENT challenge could not join their own challenge.
-        //
-        // Policy aligned to: same-department OR creator.
-        // "Existing participant" exception is not needed here — if they are already a
-        // participant the duplicate-join check below will handle it gracefully.
+        // Enforce department visibility on join — policy:
+        //   same-department OR creator
+        // "Existing participant" exception intentionally excluded here:
+        //   if they are already a participant the duplicate-join check below handles it.
         if (challenge.getVisibilityType().equals(VisibilityType.DEPARTMENT)) {
             Integer challengeDeptId = challenge.getDepartment() != null
                     ? challenge.getDepartment().getDepartmentId()
@@ -114,6 +112,7 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
         return participantRepository.save(participant).getParticipantId();
     }
 
+    // US 03 - Active/upcoming challenge catalog for a user.
     @Override
     @Transactional(readOnly = false)
     public List<ActiveChallengeResponseDTO> getActiveChallenges(Integer userId)
@@ -135,7 +134,7 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
                 LocalDate.now(), user.getDepartment().getDepartmentId());
 
         if (challenges.isEmpty()) {
-            throw new WellnessTrackerException("Service.NO_CHALLENGES_FOUND");
+        	return new ArrayList<>();
         }
 
         List<Integer> challengeIds = new ArrayList<>();
@@ -143,19 +142,20 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
             challengeIds.add(c.getChallengeId());
         }
 
-        List<Integer> joinedIds = participantRepository
-                .findJoinedChallengeIdsByUser(userId, challengeIds);
-
+        Set<Integer> joinedIdSet = new HashSet<>(
+                participantRepository.findJoinedChallengeIdsByUser(userId, challengeIds));
+ 
         List<ActiveChallengeResponseDTO> responseList = new ArrayList<>();
         for (Challenge c : challenges) {
             ActiveChallengeResponseDTO dto = mapToActiveDTO(c);
-            dto.setAlreadyJoined(joinedIds.contains(c.getChallengeId()));
+            dto.setAlreadyJoined(joinedIdSet.contains(c.getChallengeId()));
             responseList.add(dto);
         }
 
         return responseList;
     }
 
+    // US 03 - All challenges the user has joined, with live progress
     @Override
     @Transactional(readOnly = false)
     public List<MyChallengeResponseDTO> getMyChallenges(Integer userId)
@@ -164,7 +164,6 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
             throw new WellnessTrackerException("Service.USER_NOT_FOUND");
         }
 
-        // Sync before reading so DB column is up to date
         statusSyncService.syncStatuses();
 
         List<ChallengeParticipant> participations = participantRepository

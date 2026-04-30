@@ -6,9 +6,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.infy.dto.ActiveChallengeResponseDTO;
 import com.infy.dto.ChallengeRequestDTO;
 import com.infy.dto.ChallengeResponseDTO;
+import com.infy.dto.ChallengeUpdateRequestDTO;
 import com.infy.dto.JoinChallengeRequestDTO;
 import com.infy.dto.MyChallengeResponseDTO;
 import com.infy.exception.WellnessTrackerException;
@@ -46,7 +49,30 @@ public class ChallengeAPI {
         String successMessage = env.getProperty("API.CREATE_CHALLENGE_SUCCESS") + challengeId;
         return new ResponseEntity<>(successMessage, HttpStatus.CREATED);
     }
-
+    
+    // US 13 - Manager edits an UPCOMING challenge they created
+    // requestingUserId is included in the body (ChallengeUpdateRequestDTO) for ownership check
+    @PutMapping(value = "/challenges/{challengeId}")
+    public ResponseEntity<ChallengeResponseDTO> updateChallenge(
+            @PathVariable Integer challengeId,
+            @Valid @RequestBody ChallengeUpdateRequestDTO requestDTO)
+            throws WellnessTrackerException {
+        ChallengeResponseDTO updated = challengeService.updateChallenge(challengeId, requestDTO);
+        return new ResponseEntity<>(updated, HttpStatus.OK);
+    }
+    
+    // US 13 - Manager deletes an UPCOMING challenge they created (no participants)
+    // requestingUserId passed as query param — avoids a wrapper request body for a DELETE
+    @DeleteMapping(value = "/challenges/{challengeId}")
+    public ResponseEntity<String> deleteChallenge(
+            @PathVariable Integer challengeId,
+            @RequestParam Integer requestingUserId)
+            throws WellnessTrackerException {
+        challengeService.deleteChallenge(challengeId, requestingUserId);
+        String successMessage = env.getProperty("API.DELETE_CHALLENGE_SUCCESS");
+        return new ResponseEntity<>(successMessage, HttpStatus.OK);
+    }
+    
     // US 13 - Get all challenges created by a manager
     @GetMapping(value = "/challenges/managers/{managerId}")
     public ResponseEntity<List<ChallengeResponseDTO>> getChallengesByManager(

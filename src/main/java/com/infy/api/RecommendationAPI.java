@@ -1,0 +1,37 @@
+package com.infy.api;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.infy.dto.RecommendationResponseDTO;
+import com.infy.exception.WellnessTrackerException;
+import com.infy.service.RecommendationService;
+
+@RestController
+@RequestMapping("/wellness")
+public class RecommendationAPI {
+
+    @Autowired
+    private RecommendationService recommendationService;
+
+    // US 08 - Get personalised wellness recommendations for a user.
+    // The rule engine re-runs on every call so results always reflect the latest activity data.
+    // Returns 3–5 recommendations. Each item includes a type (CHALLENGE or ARTICLE),
+    // a challengeId (when type = CHALLENGE) or an articleUrl (when type = ARTICLE),
+    // plus a title and description for the widget card.
+    @GetMapping(value = "/recommendations/users/{userId}")
+    public ResponseEntity<List<RecommendationResponseDTO>> getRecommendations(
+            @PathVariable Integer userId)
+            throws WellnessTrackerException {
+        List<RecommendationResponseDTO> recommendations =
+                recommendationService.getRecommendations(userId);
+        return new ResponseEntity<>(recommendations, HttpStatus.OK);
+    }
+}

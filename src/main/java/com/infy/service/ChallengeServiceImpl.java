@@ -2,8 +2,10 @@ package com.infy.service;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -12,7 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.infy.dto.ActiveChallengeResponseDTO;
 import com.infy.dto.ChallengeRequestDTO;
 import com.infy.dto.ChallengeResponseDTO;
+import com.infy.dto.ChallengeUpdateRequestDTO;
 import com.infy.entity.Challenge;
+import com.infy.entity.ChallengeParticipant;
 import com.infy.entity.Department;
 import com.infy.entity.User;
 import com.infy.enums.ActivityType;
@@ -40,14 +44,14 @@ public class ChallengeServiceImpl implements ChallengeService {
 
     @Autowired
     private ChallengeStatusSyncService statusSyncService;
-    
+
     @Autowired
     private ChallengeParticipantRepository participantRepository;
 
+    // US 13 - Manager creates a new challenge
     @Override
     public Integer createChallenge(ChallengeRequestDTO requestDTO)
             throws WellnessTrackerException {
-        // Validate creator exists and is a MANAGER
         Optional<User> optional = userRepository.findById(requestDTO.getCreatedBy());
         User manager = optional.orElseThrow(
                 () -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
@@ -56,12 +60,10 @@ public class ChallengeServiceImpl implements ChallengeService {
             throw new WellnessTrackerException("Service.NOT_A_MANAGER");
         }
 
-        // Validate end date is after start date
         if (!requestDTO.getEndDate().isAfter(requestDTO.getStartDate())) {
             throw new WellnessTrackerException("Service.INVALID_CHALLENGE_DATES");
         }
 
-        // Enforce visibility vs department consistency
         if (requestDTO.getVisibilityType() == VisibilityType.DEPARTMENT
                 && requestDTO.getDepartmentId() == null) {
             throw new WellnessTrackerException("Service.DEPARTMENT_REQUIRED_FOR_VISIBILITY");
@@ -84,7 +86,6 @@ public class ChallengeServiceImpl implements ChallengeService {
         challenge.setVisibilityType(requestDTO.getVisibilityType());
         challenge.setIsFeatured(
                 requestDTO.getIsFeatured() != null && requestDTO.getIsFeatured());
-        // Status set accurately from dates at creation time
         challenge.setStatus(resolveStatus(
                 requestDTO.getStartDate(), requestDTO.getEndDate()));
 
@@ -99,11 +100,84 @@ public class ChallengeServiceImpl implements ChallengeService {
         return challengeRepository.save(challenge).getChallengeId();
     }
 
+    // US 13 - Manager edits an UPCOMING challenge they created.
+    @Override
+    public ChallengeResponseDTO updateChallenge(Integer challengeId,
+            ChallengeUpdateRequestDTO requestDTO) throws WellnessTrackerException {
+ 
+        // Sync first so challenge.getStatus() is always accurate
+        statusSyncService.syncStatuses();
+ 
+        Optional<Challenge> optional = challengeRepository.findById(challengeId);
+        Challenge challenge = optional.orElseThrow(
+                () -> new WellnessTrackerException("Service.CHALLENGE_NOT_FOUND"));
+ 
+        // Only the original creator may edit
+        if (!challenge.getCreatedBy().getUserId().equals(requestDTO.getRequestingUserId())) {
+            throw new WellnessTrackerException("Service.CHALLENGE_EDIT_FORBIDDEN");
+        }
+ 
+        // Only UPCOMING challenges are editable
+        if (!challenge.getStatus().equals(ChallengeStatus.UPCOMING)) {
+            throw new WellnessTrackerException("Service.CHALLENGE_NOT_EDITABLE");
+        }
+ 
+        // endDate must remain after the immutable startDate
+        if (!requestDTO.getEndDate().isAfter(challenge.getStartDate())) {
+            throw new WellnessTrackerException("Service.INVALID_CHALLENGE_DATES");
+        }
+ 
+        challenge.setTitle(requestDTO.getTitle());
+        challenge.setDescription(requestDTO.getDescription());
+        challenge.setGoalValue(requestDTO.getGoalValue());
+        challenge.setDifficulty(requestDTO.getDifficulty());
+        challenge.setEndDate(requestDTO.getEndDate());
+        challenge.setIsFeatured(
+                requestDTO.getIsFeatured() != null && requestDTO.getIsFeatured());
+ 
+        // Re-derive status in case the new endDate now falls in the past
+        challenge.setStatus(resolveStatus(challenge.getStartDate(), requestDTO.getEndDate()));
+ 
+        return mapToDTO(challengeRepository.save(challenge));
+    }
+    
+    // US 13 - Manager deletes an UPCOMING challenge they created.
+    @Override
+    public void deleteChallenge(Integer challengeId, Integer requestingUserId)
+            throws WellnessTrackerException {
+ 
+        // Sync before read so status is accurate
+        statusSyncService.syncStatuses();
+ 
+        Optional<Challenge> optional = challengeRepository.findById(challengeId);
+        Challenge challenge = optional.orElseThrow(
+                () -> new WellnessTrackerException("Service.CHALLENGE_NOT_FOUND"));
+ 
+        // Only the original creator may delete
+        if (!challenge.getCreatedBy().getUserId().equals(requestingUserId)) {
+            throw new WellnessTrackerException("Service.CHALLENGE_DELETE_FORBIDDEN");
+        }
+ 
+        // Only UPCOMING challenges can be deleted
+        if (!challenge.getStatus().equals(ChallengeStatus.UPCOMING)) {
+            throw new WellnessTrackerException("Service.CHALLENGE_NOT_DELETABLE");
+        }
+ 
+        // Block deletion if participants have joined
+        List<ChallengeParticipant> participants =
+                participantRepository.findByChallenge_ChallengeIdOrderByJoinedAtAsc(challengeId);
+        if (!participants.isEmpty()) {
+            throw new WellnessTrackerException("Service.CHALLENGE_HAS_PARTICIPANTS");
+        }
+ 
+        challengeRepository.deleteById(challengeId);
+    }
+    
+    // US 13 - Get all challenges created by a manager
     @Override
     @Transactional(readOnly = false)
     public List<ChallengeResponseDTO> getChallengesByManager(Integer managerId)
             throws WellnessTrackerException {
-        // Validate user exists and is a MANAGER
         Optional<User> optional = userRepository.findById(managerId);
         User manager = optional.orElseThrow(
                 () -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
@@ -112,7 +186,6 @@ public class ChallengeServiceImpl implements ChallengeService {
             throw new WellnessTrackerException("Service.NOT_A_MANAGER");
         }
 
-        // Sync DB statuses before reading so response reflects today's reality
         statusSyncService.syncStatuses();
 
         List<Challenge> challenges = challengeRepository
@@ -129,27 +202,23 @@ public class ChallengeServiceImpl implements ChallengeService {
         return responseList;
     }
 
+    // US 13 / 03 - Get a single challenge by ID (visibility-guarded)
     @Override
     @Transactional(readOnly = false)
     public ChallengeResponseDTO getChallengeById(Integer challengeId, Integer requestingUserId)
             throws WellnessTrackerException {
-        // Sync before read so status in response is always accurate
-        statusSyncService.syncStatuses();
 
-        // Validate challenge exists
+    	statusSyncService.syncStatuses();
+
         Optional<Challenge> optional = challengeRepository.findById(challengeId);
         Challenge challenge = optional.orElseThrow(
                 () -> new WellnessTrackerException("Service.CHALLENGE_NOT_FOUND"));
 
-        // Validate requesting user exists and fetch their department
         Optional<User> userOptional = userRepository.findById(requestingUserId);
         User requestingUser = userOptional.orElseThrow(
                 () -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
 
-        // Enforce visibility — DEPARTMENT challenges are only visible to:
-        //   1. Users in the same department
-        //   2. Existing participants (joined before department changed, edge case)
-        //   3. The manager who created it
+        // DEPARTMENT challenges: same-dept OR creator OR existing participant
         if (challenge.getVisibilityType().equals(VisibilityType.DEPARTMENT)) {
             Integer challengeDeptId = challenge.getDepartment() != null
                     ? challenge.getDepartment().getDepartmentId()
@@ -175,8 +244,8 @@ public class ChallengeServiceImpl implements ChallengeService {
 
         return mapToDTO(challenge);
     }
-    
-    // US 07 - Return featured, non-expired challenges visible to the user's department
+
+    // US 07 - Return featured, non-expired challenges visible to the user's department.
     @Override
     @Transactional(readOnly = false)
     public List<ActiveChallengeResponseDTO> getFeaturedChallenges(Integer userId)
@@ -184,38 +253,36 @@ public class ChallengeServiceImpl implements ChallengeService {
         Optional<User> userOptional = userRepository.findById(userId);
         User user = userOptional.orElseThrow(
                 () -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
- 
+
         // HR users cannot see the challenge catalog or featured challenges since they cannot join
         if (user.getRole().equals(Role.HR)) {
             throw new WellnessTrackerException("Service.NOT_AN_EMPLOYEE");
         }
- 
-        // Sync DB statuses before reading so status field in response is accurate
+
         statusSyncService.syncStatuses();
- 
+
         List<Challenge> featured = challengeRepository.findFeaturedChallengesForDepartment(
                 LocalDate.now(), user.getDepartment().getDepartmentId());
- 
+
         if (featured.isEmpty()) {
-            throw new WellnessTrackerException("Service.NO_FEATURED_CHALLENGES_FOUND");
+            return new ArrayList<>();
         }
- 
-        // Batch-fetch alreadyJoined status for all featured challenges in one query
+
         List<Integer> challengeIds = new ArrayList<>();
         for (Challenge c : featured) {
             challengeIds.add(c.getChallengeId());
         }
- 
-        List<Integer> joinedIds = participantRepository
-                .findJoinedChallengeIdsByUser(userId, challengeIds);
- 
+
+        Set<Integer> joinedIdSet = new HashSet<>(
+                participantRepository.findJoinedChallengeIdsByUser(userId, challengeIds));
+
         List<ActiveChallengeResponseDTO> responseList = new ArrayList<>();
         for (Challenge c : featured) {
             ActiveChallengeResponseDTO dto = mapToActiveDTO(c);
-            dto.setAlreadyJoined(joinedIds.contains(c.getChallengeId()));
+            dto.setAlreadyJoined(joinedIdSet.contains(c.getChallengeId()));
             responseList.add(dto);
         }
- 
+
         return responseList;
     }
 
@@ -250,7 +317,7 @@ public class ChallengeServiceImpl implements ChallengeService {
         }
         return dto;
     }
-    
+
     private ActiveChallengeResponseDTO mapToActiveDTO(Challenge c) {
         ActiveChallengeResponseDTO dto = new ActiveChallengeResponseDTO();
         dto.setChallengeId(c.getChallengeId());
@@ -271,7 +338,7 @@ public class ChallengeServiceImpl implements ChallengeService {
         }
         return dto;
     }
- 
+
     private String resolveUnit(ActivityType metricType) {
         return switch (metricType) {
             case STEPS      -> "steps";
