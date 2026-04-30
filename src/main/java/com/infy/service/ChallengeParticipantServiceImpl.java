@@ -22,7 +22,6 @@ import com.infy.entity.ChallengeParticipant;
 import com.infy.entity.User;
 import com.infy.enums.ActivityType;
 import com.infy.enums.ChallengeStatus;
-import com.infy.enums.Role;
 import com.infy.enums.VisibilityType;
 import com.infy.exception.WellnessTrackerException;
 import com.infy.repository.ActivityLogRepository;
@@ -49,7 +48,7 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
     @Autowired
     private ChallengeStatusSyncService statusSyncService;
 
-    // US 03 - Employee or manager joins a challenge
+    // US 03 - Join challenge
     @Override
     public Integer joinChallenge(JoinChallengeRequestDTO requestDTO)
             throws WellnessTrackerException {
@@ -57,11 +56,6 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
         Optional<User> userOptional = userRepository.findById(requestDTO.getUserId());
         User user = userOptional.orElseThrow(
                 () -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
-
-        // Only employees and managers can join — HR cannot
-        if (user.getRole().equals(Role.HR)) {
-            throw new WellnessTrackerException("Service.NOT_AN_EMPLOYEE");
-        }
 
         Optional<Challenge> challengeOptional = challengeRepository.findById(
                 requestDTO.getChallengeId());
@@ -77,15 +71,11 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
 
         // Enforce department visibility on join — policy:
         //   same-department OR creator
-        // "Existing participant" exception intentionally excluded here:
-        //   if they are already a participant the duplicate-join check below handles it.
         if (challenge.getVisibilityType().equals(VisibilityType.DEPARTMENT)) {
             Integer challengeDeptId = challenge.getDepartment() != null
-                    ? challenge.getDepartment().getDepartmentId()
-                    : null;
+                    ? challenge.getDepartment().getDepartmentId() : null;
             Integer userDeptId = user.getDepartment() != null
-                    ? user.getDepartment().getDepartmentId()
-                    : null;
+                    ? user.getDepartment().getDepartmentId() : null;
 
             boolean inSameDepartment = challengeDeptId != null
                     && challengeDeptId.equals(userDeptId);
@@ -121,12 +111,6 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
         User user = userOptional.orElseThrow(
                 () -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
 
-        // HR users cannot see the challenge catalog since they cannot join
-        if (user.getRole().equals(Role.HR)) {
-            throw new WellnessTrackerException("Service.NOT_AN_EMPLOYEE");
-        }
-
-        // Sync DB statuses before reading so the DB column is always accurate
         statusSyncService.syncStatuses();
 
         // Date-based query — not dependent on stale status column

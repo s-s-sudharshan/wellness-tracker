@@ -96,7 +96,7 @@ public class WellnessArticleServiceImpl implements WellnessArticleService {
         }
         return response;
     }
-
+    
     // Validates user exists and is HR. Throws appropriate exceptions otherwise.
     private User resolveHrUser(Integer userId) throws WellnessTrackerException {
         Optional<User> optional = userRepository.findById(userId);
