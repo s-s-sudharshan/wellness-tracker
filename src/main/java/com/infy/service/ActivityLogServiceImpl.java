@@ -25,142 +25,167 @@ import com.infy.repository.UserRepository;
 @Transactional
 public class ActivityLogServiceImpl implements ActivityLogService {
 
-	@Autowired
-	private ActivityLogRepository activityLogRepository;
+    @Autowired
+    private ActivityLogRepository activityLogRepository;
 
-	@Autowired
-	private UserRepository userRepository;
+    @Autowired
+    private UserRepository userRepository;
 
-	@Override
-	public Integer createActivityLog(ActivityLogRequestDTO requestDTO) throws WellnessTrackerException {
-		Optional<User> optional = userRepository.findById(requestDTO.getUserId());
-		User user = optional.orElseThrow(() -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
+    @Override
+    public Integer createActivityLog(ActivityLogRequestDTO requestDTO)
+            throws WellnessTrackerException {
+        Optional<User> optional = userRepository.findById(requestDTO.getUserId());
+        User user = optional.orElseThrow(
+                () -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
 
-		ActivityLog activityLog = new ActivityLog();
-		activityLog.setUser(user);
-		activityLog.setActivityType(requestDTO.getActivityType());
-		activityLog.setActivityDate(requestDTO.getActivityDate());
-		activityLog.setActivityValue(requestDTO.getActivityValue());
-		activityLog.setUnit(requestDTO.getUnit());
-		activityLog.setNotes(requestDTO.getNotes());
-		return activityLogRepository.save(activityLog).getActivityLogId();
-	}
+        ActivityLog activityLog = new ActivityLog();
+        activityLog.setUser(user);
+        activityLog.setActivityType(requestDTO.getActivityType());
+        activityLog.setActivityDate(requestDTO.getActivityDate());
+        activityLog.setActivityValue(requestDTO.getActivityValue());
+        activityLog.setUnit(requestDTO.getUnit());
+        activityLog.setNotes(requestDTO.getNotes());
+        return activityLogRepository.save(activityLog).getActivityLogId();
+    }
 
-	@Override
-	@Transactional(readOnly = true)
-	public List<ActivityLogResponseDTO> getActivityHistory(Integer userId) throws WellnessTrackerException {
-		if (!userRepository.existsById(userId)) {
-			throw new WellnessTrackerException("Service.USER_NOT_FOUND");
-		}
+    // US 01 - Update an existing activity log.
+    // Ownership is enforced at DB level — findByActivityLogIdAndUser_UserId returns
+    // empty if the log does not belong to the requesting user.
+    @Override
+    public ActivityLogResponseDTO updateActivityLog(Integer activityLogId,
+            ActivityLogRequestDTO requestDTO) throws WellnessTrackerException {
 
-		List<ActivityLog> logs = activityLogRepository
-				.findByUser_UserIdOrderByActivityDateDescCreatedAtDesc(userId);
+        Optional<ActivityLog> optional = activityLogRepository
+                .findByActivityLogIdAndUser_UserId(activityLogId, requestDTO.getUserId());
+        ActivityLog activityLog = optional.orElseThrow(
+                () -> new WellnessTrackerException("Service.ACTIVITY_LOG_NOT_FOUND"));
 
-		if (logs.isEmpty()) {
-			throw new WellnessTrackerException("Service.NO_ACTIVITY_FOUND");
-		}
+        activityLog.setActivityType(requestDTO.getActivityType());
+        activityLog.setActivityDate(requestDTO.getActivityDate());
+        activityLog.setActivityValue(requestDTO.getActivityValue());
+        activityLog.setUnit(requestDTO.getUnit());
+        activityLog.setNotes(requestDTO.getNotes());
 
-		List<ActivityLogResponseDTO> responseList = new ArrayList<>();
-		for (ActivityLog log : logs) {
-			ActivityLogResponseDTO dto = new ActivityLogResponseDTO();
-			dto.setUserId(log.getUser().getUserId());
-			dto.setUserName(log.getUser().getFirstName() + " " + log.getUser().getLastName());
-			dto.setActivityLogId(log.getActivityLogId());
-			dto.setActivityType(log.getActivityType());
-			dto.setActivityDate(log.getActivityDate());
-			dto.setActivityValue(log.getActivityValue());
-			dto.setUnit(log.getUnit());
-			dto.setNotes(log.getNotes());
-			dto.setCreatedAt(log.getCreatedAt());
-			responseList.add(dto);
-		}
+        return mapToDTO(activityLogRepository.save(activityLog));
+    }
 
-		return responseList;
-	}
+    // US 01 - Delete an activity log.
+    // userId passed separately (query param on DELETE) to enforce ownership.
+    @Override
+    public void deleteActivityLog(Integer activityLogId, Integer userId)
+            throws WellnessTrackerException {
 
-	@Override
-	@Transactional(readOnly = true)
-	public ActivitySummaryDTO getActivitySummary(Integer userId, LocalDate fromDate, LocalDate toDate)
-			throws WellnessTrackerException {
-		if (!userRepository.existsById(userId)) {
-			throw new WellnessTrackerException("Service.USER_NOT_FOUND");
-		}
+        Optional<ActivityLog> optional = activityLogRepository
+                .findByActivityLogIdAndUser_UserId(activityLogId, userId);
+        optional.orElseThrow(
+                () -> new WellnessTrackerException("Service.ACTIVITY_LOG_NOT_FOUND"));
 
-		if (fromDate.isAfter(toDate)) {
-			throw new WellnessTrackerException("Service.INVALID_DATE_RANGE");
-		}
+        activityLogRepository.deleteById(activityLogId);
+    }
 
-		Integer totalActivities = activityLogRepository
-				.countByUser_UserIdAndActivityDateBetween(userId, fromDate, toDate);
+    @Override
+    @Transactional(readOnly = true)
+    public List<ActivityLogResponseDTO> getActivityHistory(Integer userId)
+            throws WellnessTrackerException {
+        if (!userRepository.existsById(userId)) {
+            throw new WellnessTrackerException("Service.USER_NOT_FOUND");
+        }
 
-		List<Object[]> rawSummary = activityLogRepository
-				.findSummaryByUserAndDateRange(userId, fromDate, toDate);
+        List<ActivityLog> logs = activityLogRepository
+                .findByUser_UserIdOrderByActivityDateDescCreatedAtDesc(userId);
 
-		List<ActivityMetricDTO> metrics = new ArrayList<>();
-		for (Object[] row : rawSummary) {
-			ActivityMetricDTO metric = new ActivityMetricDTO();
-			metric.setActivityType((ActivityType) row[0]);
-			metric.setTotalValue(((Number) row[1]).doubleValue());
-			metric.setUnit((String) row[2]);
-			metrics.add(metric);
-		}
+        if (logs.isEmpty()) {
+            throw new WellnessTrackerException("Service.NO_ACTIVITY_FOUND");
+        }
 
-		ActivitySummaryDTO summaryDTO = new ActivitySummaryDTO();
-		summaryDTO.setUserId(userId);
-		summaryDTO.setFromDate(fromDate);
-		summaryDTO.setToDate(toDate);
-		summaryDTO.setTotalActivities(totalActivities);
-		summaryDTO.setMetrics(metrics);
-		return summaryDTO;
-	}
+        List<ActivityLogResponseDTO> responseList = new ArrayList<>();
+        for (ActivityLog log : logs) {
+            responseList.add(mapToDTO(log));
+        }
+        return responseList;
+    }
 
-	// US 02 — Day-wise activity trend for charting.
-	//
-	// P2 Fix: Returns an empty list [] when no activity rows exist for the date range,
-	// instead of throwing NO_ACTIVITY_FOUND. Rationale:
-	//   - The date range and user are both valid — there is simply no data yet.
-	//   - Throwing a 400 error forces the frontend to add special-case error handling
-	//     for a routine "no data" state, which is not an error from the client's perspective.
-	//   - An empty list is a well-formed response the charting library can render as a
-	//     blank/zero chart without any special handling.
-	//   - This is consistent with how most time-series APIs behave (e.g. analytics APIs).
-	//
-	// If metricType is null, all activity types for the date range are returned.
-	// If metricType is provided, only rows matching that type are returned.
-	@Override
-	@Transactional(readOnly = true)
-	public List<ActivityTrendPointDTO> getActivityTrend(
-			Integer userId, LocalDate fromDate, LocalDate toDate, ActivityType metricType)
-			throws WellnessTrackerException {
-		if (!userRepository.existsById(userId)) {
-			throw new WellnessTrackerException("Service.USER_NOT_FOUND");
-		}
+    @Override
+    @Transactional(readOnly = true)
+    public ActivitySummaryDTO getActivitySummary(Integer userId, LocalDate fromDate,
+            LocalDate toDate) throws WellnessTrackerException {
+        if (!userRepository.existsById(userId)) {
+            throw new WellnessTrackerException("Service.USER_NOT_FOUND");
+        }
 
-		if (fromDate.isAfter(toDate)) {
-			throw new WellnessTrackerException("Service.INVALID_DATE_RANGE");
-		}
+        if (fromDate.isAfter(toDate)) {
+            throw new WellnessTrackerException("Service.INVALID_DATE_RANGE");
+        }
 
-		List<Object[]> raw = activityLogRepository.findTrendByUserAndDateRange(
-				userId, fromDate, toDate);
+        Integer totalActivities = activityLogRepository
+                .countByUser_UserIdAndActivityDateBetween(userId, fromDate, toDate);
 
-		// Return empty list — not an error — when no activity exists in the range.
-		// The frontend chart renders an empty state; no special error handling needed.
-		List<ActivityTrendPointDTO> result = new ArrayList<>();
-		for (Object[] row : raw) {
-			ActivityType type = (ActivityType) row[1];
-			// Filter by metric type in Java when a specific type is requested.
-			// Avoids a separate parameterised query and keeps the repository query reusable.
-			if (metricType != null && !type.equals(metricType)) {
-				continue;
-			}
-			ActivityTrendPointDTO point = new ActivityTrendPointDTO();
-			point.setActivityDate((LocalDate) row[0]);
-			point.setActivityType(type);
-			point.setTotalValue(((Number) row[2]).doubleValue());
-			point.setUnit((String) row[3]);
-			result.add(point);
-		}
+        List<Object[]> rawSummary = activityLogRepository
+                .findSummaryByUserAndDateRange(userId, fromDate, toDate);
 
-		return result;
-	}
+        List<ActivityMetricDTO> metrics = new ArrayList<>();
+        for (Object[] row : rawSummary) {
+            ActivityMetricDTO metric = new ActivityMetricDTO();
+            metric.setActivityType((ActivityType) row[0]);
+            metric.setTotalValue(((Number) row[1]).doubleValue());
+            metric.setUnit((String) row[2]);
+            metrics.add(metric);
+        }
+
+        ActivitySummaryDTO summaryDTO = new ActivitySummaryDTO();
+        summaryDTO.setUserId(userId);
+        summaryDTO.setFromDate(fromDate);
+        summaryDTO.setToDate(toDate);
+        summaryDTO.setTotalActivities(totalActivities);
+        summaryDTO.setMetrics(metrics);
+        return summaryDTO;
+    }
+
+    // US 02 - Returns [] on empty — not an error for a chart/time-series endpoint.
+    // If metricType is null, all types are returned. If provided, filtered in Java.
+    @Override
+    @Transactional(readOnly = true)
+    public List<ActivityTrendPointDTO> getActivityTrend(Integer userId, LocalDate fromDate,
+            LocalDate toDate, ActivityType metricType) throws WellnessTrackerException {
+        if (!userRepository.existsById(userId)) {
+            throw new WellnessTrackerException("Service.USER_NOT_FOUND");
+        }
+
+        if (fromDate.isAfter(toDate)) {
+            throw new WellnessTrackerException("Service.INVALID_DATE_RANGE");
+        }
+
+        List<Object[]> raw = activityLogRepository
+                .findTrendByUserAndDateRange(userId, fromDate, toDate);
+
+        List<ActivityTrendPointDTO> result = new ArrayList<>();
+        for (Object[] row : raw) {
+            ActivityType type = (ActivityType) row[1];
+            if (metricType != null && !type.equals(metricType)) {
+                continue;
+            }
+            ActivityTrendPointDTO point = new ActivityTrendPointDTO();
+            point.setActivityDate((LocalDate) row[0]);
+            point.setActivityType(type);
+            point.setTotalValue(((Number) row[2]).doubleValue());
+            point.setUnit((String) row[3]);
+            result.add(point);
+        }
+        return result;
+    }
+
+    // Shared mapping used by create, update, and get history
+    private ActivityLogResponseDTO mapToDTO(ActivityLog log) {
+        ActivityLogResponseDTO dto = new ActivityLogResponseDTO();
+        dto.setActivityLogId(log.getActivityLogId());
+        dto.setUserId(log.getUser().getUserId());
+        dto.setUserName(log.getUser().getFirstName() + " " + log.getUser().getLastName());
+        dto.setActivityType(log.getActivityType());
+        dto.setActivityDate(log.getActivityDate());
+        dto.setActivityValue(log.getActivityValue());
+        dto.setUnit(log.getUnit());
+        dto.setNotes(log.getNotes());
+        dto.setCreatedAt(log.getCreatedAt());
+        return dto;
+    }
 }

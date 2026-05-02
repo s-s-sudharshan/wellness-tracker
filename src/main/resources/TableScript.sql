@@ -66,10 +66,12 @@ CREATE TABLE IF NOT EXISTS mood_logs (
 );
 
 CREATE TABLE IF NOT EXISTS badges (
-    badge_id INT NOT NULL AUTO_INCREMENT,
-    title VARCHAR(100) NOT NULL,
-    description VARCHAR(500) NOT NULL,
-    criteria_type VARCHAR(50) NOT NULL,
+    badge_id       INT NOT NULL AUTO_INCREMENT,
+    title          VARCHAR(100) NOT NULL,
+    description    VARCHAR(500) NOT NULL,
+    badge_icon     VARCHAR(100) NOT NULL DEFAULT 'bi-award',
+    badge_color    VARCHAR(20)  NOT NULL DEFAULT '#6c757d',
+    criteria_type  VARCHAR(50) NOT NULL,
     criteria_value DECIMAL(10,2) NOT NULL,
     PRIMARY KEY (badge_id)
 );
@@ -134,6 +136,19 @@ CREATE TABLE IF NOT EXISTS recommendations (
     CONSTRAINT fk_rec_challenge FOREIGN KEY (challenge_id) REFERENCES challenges(challenge_id)
 );
 
+CREATE TABLE IF NOT EXISTS wellness_articles (
+    article_id     INT NOT NULL AUTO_INCREMENT,
+    created_by     INT NOT NULL,
+    title          VARCHAR(150) NOT NULL,
+    description    VARCHAR(500) NOT NULL,
+    article_url    VARCHAR(500) NOT NULL,
+    related_metric VARCHAR(30) NULL,
+    status         VARCHAR(30) NOT NULL DEFAULT 'DRAFT',
+    created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (article_id),
+    CONSTRAINT fk_article_user FOREIGN KEY (created_by) REFERENCES users(user_id)
+);
+
 CREATE TABLE IF NOT EXISTS notifications (
     notification_id INT NOT NULL AUTO_INCREMENT,
     user_id INT NOT NULL,
@@ -160,64 +175,56 @@ CREATE TABLE IF NOT EXISTS bulk_uploads (
     CONSTRAINT fk_bulk_user FOREIGN KEY (uploaded_by) REFERENCES users(user_id)
 );
 
+-- ============================================================
+-- SEED DATA
+-- ============================================================
+
 INSERT INTO departments (department_name) VALUES
 ('Engineering'),
 ('Marketing'),
 ('Human Resources');
 
+-- Passwords are plain text (Spring Security deferred).
+-- user_id=1: Sarah Connor — MANAGER, Engineering
+-- user_id=2: John Doe    — EMPLOYEE, Engineering
+-- user_id=3: Jane Smith  — EMPLOYEE, Engineering
+-- user_id=4: Mike Jones  — EMPLOYEE, Marketing
+-- user_id=5: Priya Patel — HR,       Human Resources
 INSERT INTO users (first_name, last_name, email, password_hash, role, department_id, manager_id, status) VALUES
 ('Sarah', 'Connor', 'sarah.connor@infy.com', 'password123', 'MANAGER', 1, NULL, 'ACTIVE'),
-('John', 'Doe', 'john.doe@infy.com', 'password123', 'EMPLOYEE', 1, 1, 'ACTIVE'),
-('Jane', 'Smith', 'jane.smith@infy.com', 'password123', 'EMPLOYEE', 1, 1, 'ACTIVE'),
-('Mike', 'Jones', 'mike.j@infy.com', 'password123', 'EMPLOYEE', 2, NULL, 'ACTIVE'),
-('Priya', 'Patel', 'priya.p@infy.com', 'password123', 'HR', 3, NULL, 'ACTIVE');
+('John',  'Doe',    'john.doe@infy.com',     'password123', 'EMPLOYEE', 1, 1,    'ACTIVE'),
+('Jane',  'Smith',  'jane.smith@infy.com',   'password123', 'EMPLOYEE', 1, 1,    'ACTIVE'),
+('Mike',  'Jones',  'mike.j@infy.com',       'password123', 'EMPLOYEE', 2, NULL, 'ACTIVE'),
+('Priya', 'Patel',  'priya.p@infy.com',      'password123', 'HR',       3, NULL, 'ACTIVE');
 
-INSERT INTO activity_logs (user_id, activity_type, activity_date, activity_value, unit, notes) VALUES
-(2, 'STEPS', '2026-04-01', 8500, 'steps', 'Morning walk'),
-(2, 'WATER', '2026-04-01', 2.5, 'liters', NULL),
-(2, 'WORKOUT', '2026-04-02', 45, 'minutes', 'Gym session'),
-(2, 'MEDITATION', '2026-04-02', 15, 'minutes', 'Morning routine'),
-(2, 'STEPS', '2026-04-03', 10200, 'steps', NULL),
-(2, 'SLEEP', '2026-04-03', 7.5, 'hours', 'Good night'),
-(2, 'WATER', '2026-04-07', 3, 'liters', NULL),
-(2, 'WORKOUT', '2026-04-08', 60, 'minutes', 'Cycling'),
-(2, 'STEPS', '2026-04-09', 9300, 'steps', NULL),
-(2, 'MEDITATION', '2026-04-10', 20, 'minutes', 'Evening session'),
-(2, 'STEPS', '2026-04-14', 11000, 'steps', 'Long walk'),
-(2, 'WORKOUT', '2026-04-15', 45, 'minutes', 'Strength training'),
-(2, 'WATER', '2026-04-16', 2, 'liters', NULL),
-(2, 'SLEEP', '2026-04-17', 8, 'hours', NULL),
-(2, 'STEPS', '2026-04-18', 7600, 'steps', NULL),
-(3, 'STEPS', '2026-04-15', 7200, 'steps', NULL),
-(3, 'WORKOUT', '2026-04-16', 30, 'minutes', 'Morning run'),
-(3, 'WATER', '2026-04-17', 1.5, 'liters', NULL);
-
--- US 13 seed data: Challenges created by Sarah Connor (manager, user_id = 1)
-
-INSERT INTO challenges (title, description, created_by, metric_type, goal_value, difficulty, start_date, end_date, visibility_type, department_id, reward_badge_id, is_featured, status) VALUES
-
+-- ============================================================
+-- Challenges — created by Sarah Connor (manager, user_id=1)
+-- ============================================================
+INSERT INTO challenges (title, description, created_by, metric_type, goal_value, difficulty,
+    start_date, end_date, visibility_type, department_id, reward_badge_id, is_featured, status)
+VALUES
 ('10K Steps Daily Challenge',
  'Walk 10,000 steps every day for a week to boost your cardiovascular health.',
  1, 'STEPS', 70000, 'MEDIUM',
- '2026-04-28', '2026-05-04',
- 'COMPANY_WIDE', NULL, NULL, TRUE, 'UPCOMING'),
+ '2026-04-28', '2026-05-31',
+ 'COMPANY_WIDE', NULL, NULL, TRUE, 'ACTIVE'),
 
 ('Morning Workout Sprint',
  'Complete 120 minutes of workout this week. Any exercise counts — gym, yoga, cycling.',
  1, 'WORKOUT', 120, 'EASY',
- '2026-04-28', '2026-05-04',
- 'DEPARTMENT', 1, NULL, FALSE, 'UPCOMING'),
+ '2026-04-28', '2026-05-31',
+ 'DEPARTMENT', 1, NULL, FALSE, 'ACTIVE'),
 
 ('Hydration Hero',
  'Log at least 21 liters of water intake over 7 days. Stay hydrated, stay sharp.',
  1, 'WATER', 21, 'EASY',
- '2026-04-26', '2026-05-02',
+ '2026-04-26', '2026-05-31',
  'COMPANY_WIDE', NULL, NULL, TRUE, 'ACTIVE'),
 
 ('Mindfulness Month',
  'Meditate for a total of 300 minutes this month. Build focus and reduce stress.',
  1, 'MEDITATION', 300, 'HARD',
- '2026-04-01', '2026-04-30',
+ '2026-04-01', '2026-05-31',
  'COMPANY_WIDE', NULL, NULL, FALSE, 'ACTIVE'),
 
 ('Sleep Reset Week',
@@ -225,54 +232,111 @@ INSERT INTO challenges (title, description, created_by, metric_type, goal_value,
  1, 'SLEEP', 49, 'MEDIUM',
  '2026-03-01', '2026-03-07',
  'DEPARTMENT', 1, NULL, FALSE, 'COMPLETED');
- 
- 
- -- Clear John's existing logs so thresholds are predictable
-DELETE FROM activity_logs WHERE user_id = 2;
 
--- Steps: above threshold (35,000) — rule should NOT fire
-INSERT INTO activity_logs (user_id, activity_type, activity_date, activity_value, unit) VALUES
-(2, 'STEPS', CURDATE(),          12000, 'steps'),
-(2, 'STEPS', CURDATE() - INTERVAL 1 DAY, 11000, 'steps'),
-(2, 'STEPS', CURDATE() - INTERVAL 2 DAY, 10000, 'steps'),
-(2, 'STEPS', CURDATE() - INTERVAL 3 DAY,  9000, 'steps');
+-- ============================================================
+-- Wellness Articles — published by Priya Patel (HR, user_id=5)
+--
+-- One PUBLISHED article per metric type (used by rule engine fallbacks).
+-- Two PUBLISHED general articles with NULL related_metric (used by Pass B padding).
+-- One DRAFT article to verify draft articles are correctly excluded.
+--
+-- URL uniqueness is required by the recommendation engine dedup contract.
+-- ============================================================
+INSERT INTO wellness_articles (created_by, title, description, article_url, related_metric, status)
+VALUES
+-- Metric-specific articles (rule engine fallbacks)
+(5,
+ 'How to Hit Your Daily Hydration Goals',
+ 'Discover practical strategies to drink more water throughout the day, from habit stacking to flavoured infusions. Staying hydrated improves focus, energy, and recovery.',
+ 'https://wellness.infy.com/articles/hydration-goals',
+ 'WATER',
+ 'PUBLISHED'),
 
--- Workout: above threshold (60 min) — rule should NOT fire
-INSERT INTO activity_logs (user_id, activity_type, activity_date, activity_value, unit) VALUES
-(2, 'WORKOUT', CURDATE(),          30, 'minutes'),
-(2, 'WORKOUT', CURDATE() - INTERVAL 1 DAY, 40, 'minutes');
+(5,
+ 'Walk Your Way to Better Health',
+ 'Learn how increasing your daily step count — even by 1,000 steps — can reduce cardiovascular risk, improve mood, and boost metabolism. Tips for fitting more walking into a desk-job lifestyle.',
+ 'https://wellness.infy.com/articles/step-count-benefits',
+ 'STEPS',
+ 'PUBLISHED'),
 
--- Sleep: above threshold (42 hrs) — rule should NOT fire
-INSERT INTO activity_logs (user_id, activity_type, activity_date, activity_value, unit) VALUES
-(2, 'SLEEP', CURDATE(),                      7, 'hours'),
-(2, 'SLEEP', CURDATE() - INTERVAL 1 DAY,    7, 'hours'),
-(2, 'SLEEP', CURDATE() - INTERVAL 2 DAY,    7, 'hours'),
-(2, 'SLEEP', CURDATE() - INTERVAL 3 DAY,    7, 'hours'),
-(2, 'SLEEP', CURDATE() - INTERVAL 4 DAY,    7, 'hours'),
-(2, 'SLEEP', CURDATE() - INTERVAL 5 DAY,    7, 'hours'),
-(2, 'SLEEP', CURDATE() - INTERVAL 6 DAY,    7, 'hours');
+(5,
+ 'Making Time for Exercise: A Practical Guide',
+ 'Short on time? This guide covers how to fit effective workouts into a busy schedule, including 20-minute high-intensity sessions and lunchtime movement breaks.',
+ 'https://wellness.infy.com/articles/workout-time-guide',
+ 'WORKOUT',
+ 'PUBLISHED'),
 
+(5,
+ 'The Science of Sleep: Why Rest is a Performance Tool',
+ 'Poor sleep undermines focus, mood, and physical recovery. This article covers sleep hygiene basics, optimal sleep windows, and how to track your rest for continuous improvement.',
+ 'https://wellness.infy.com/articles/sleep-science',
+ 'SLEEP',
+ 'PUBLISHED'),
 
--- ------------------------------------------------------------
--- Recommendation test data reset
--- ------------------------------------------------------------
+(5,
+ 'Getting Started with Daily Meditation',
+ 'Even five minutes of daily mindfulness can reduce cortisol levels and improve emotional regulation. This beginner-friendly guide covers breathing techniques, apps, and building a sustainable habit.',
+ 'https://wellness.infy.com/articles/meditation-beginners',
+ 'MEDITATION',
+ 'PUBLISHED'),
+
+-- General wellness articles (Pass B padding — related_metric IS NULL)
+(5,
+ 'Building a Sustainable Wellness Routine',
+ 'Consistency beats intensity. Learn how to design a weekly wellness routine that balances activity, rest, nutrition, and mindfulness — without burning out in the first month.',
+ 'https://wellness.infy.com/articles/sustainable-wellness-routine',
+ NULL,
+ 'PUBLISHED'),
+
+(5,
+ 'Why Tracking Your Wellness Data Works',
+ 'Self-monitoring is one of the most evidence-backed behaviour change techniques. Find out how logging your steps, sleep, and mood creates a feedback loop that keeps you motivated and on track.',
+ 'https://wellness.infy.com/articles/wellness-tracking-benefits',
+ NULL,
+ 'PUBLISHED'),
+
+-- Draft article — should never appear in recommendations
+(5,
+ 'Upcoming: Nutrition and Wellness (Draft)',
+ 'This article is still being written and should not appear in any recommendations.',
+ 'https://wellness.infy.com/articles/nutrition-draft',
+ NULL,
+ 'DRAFT');
+
+-- ============================================================
+-- Recommendation test data
+-- Make John (user_id=2) trigger WATER and MEDITATION rules:
+--   water total = 8L (below 10L threshold)
+--   steps total = 40,000 (above 35,000 — rule should NOT fire)
+--   workout total = 70 min (above 60 — rule should NOT fire)
+--   sleep total = 52.5 hrs (above 42 — rule should NOT fire)
+--   meditation total = 20 min (below 30 — rule should fire)
+-- Expected result: WATER rule fires (challenge exists -> Hydration Hero),
+--   MEDITATION rule fires (challenge exists -> Mindfulness Month),
+--   both challenges already in candidates, padding fills remainder if needed.
+-- ============================================================
 DELETE FROM challenge_participants WHERE user_id IN (2, 3, 4, 5);
-DELETE FROM recommendations WHERE user_id IN (2, 3, 4, 5);
-DELETE FROM activity_logs WHERE user_id IN (2, 3, 4, 5);
+DELETE FROM recommendations         WHERE user_id IN (2, 3, 4, 5);
+DELETE FROM activity_logs           WHERE user_id IN (2, 3, 4, 5);
 
--- Make John (user_id=2) mostly active; keep hydration and meditation low
--- so recommendation rules can trigger for WATER and MEDITATION.
 INSERT INTO activity_logs (user_id, activity_type, activity_date, activity_value, unit) VALUES
+-- Water: 2L/day x 4 days = 8L (below 10L threshold)
 (2, 'WATER',      CURDATE(),                      2.0, 'liters'),
 (2, 'WATER',      CURDATE() - INTERVAL 1 DAY,     2.0, 'liters'),
 (2, 'WATER',      CURDATE() - INTERVAL 2 DAY,     2.0, 'liters'),
 (2, 'WATER',      CURDATE() - INTERVAL 3 DAY,     2.0, 'liters'),
+
+-- Steps: 10,000/day x 4 days = 40,000 (above 35,000 — no rule)
 (2, 'STEPS',      CURDATE(),                  10000.0, 'steps'),
 (2, 'STEPS',      CURDATE() - INTERVAL 1 DAY, 10000.0, 'steps'),
 (2, 'STEPS',      CURDATE() - INTERVAL 2 DAY, 10000.0, 'steps'),
 (2, 'STEPS',      CURDATE() - INTERVAL 3 DAY, 10000.0, 'steps'),
+
+-- Workout: 35 min x 2 days = 70 min (above 60 — no rule)
 (2, 'WORKOUT',    CURDATE(),                     35.0, 'minutes'),
 (2, 'WORKOUT',    CURDATE() - INTERVAL 1 DAY,    35.0, 'minutes'),
+
+-- Sleep: 7.5 hrs x 7 days = 52.5 hrs (above 42 — no rule)
 (2, 'SLEEP',      CURDATE(),                      7.5, 'hours'),
 (2, 'SLEEP',      CURDATE() - INTERVAL 1 DAY,     7.5, 'hours'),
 (2, 'SLEEP',      CURDATE() - INTERVAL 2 DAY,     7.5, 'hours'),
@@ -280,13 +344,7 @@ INSERT INTO activity_logs (user_id, activity_type, activity_date, activity_value
 (2, 'SLEEP',      CURDATE() - INTERVAL 4 DAY,     7.5, 'hours'),
 (2, 'SLEEP',      CURDATE() - INTERVAL 5 DAY,     7.5, 'hours'),
 (2, 'SLEEP',      CURDATE() - INTERVAL 6 DAY,     7.5, 'hours'),
+
+-- Meditation: 10 min x 2 days = 20 min (below 30 — rule fires)
 (2, 'MEDITATION', CURDATE(),                     10.0, 'minutes'),
 (2, 'MEDITATION', CURDATE() - INTERVAL 1 DAY,    10.0, 'minutes');
-
-
---- DELETE FROM challenge_participants WHERE user_id IN (2, 3, 4, 5);
----DELETE FROM recommendations WHERE user_id IN (2, 3, 4, 5);
---- DELETE FROM activity_logs WHERE user_id IN (2, 3, 4, 5);
-
-
- 

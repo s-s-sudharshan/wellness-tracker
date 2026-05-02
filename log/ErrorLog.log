@@ -749,3 +749,31 @@ org.springframework.web.servlet.resource.NoResourceFoundException: No static res
 30-Apr-2026 08:19:38 INFO - Starting ProtocolHandler ["http-nio-8765"]
 30-Apr-2026 08:19:38 INFO - Tomcat started on port 8765 (http) with context path ''
 30-Apr-2026 08:19:38 INFO - Condition evaluation unchanged
+02-May-2026 11:08:19 INFO - HV000001: Hibernate Validator 8.0.1.Final
+02-May-2026 11:08:19 INFO - Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+02-May-2026 11:08:19 INFO - For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+02-May-2026 11:08:22 INFO - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+02-May-2026 11:08:22 INFO - Finished Spring Data repository scanning in 89 ms. Found 9 JPA repository interfaces.
+02-May-2026 11:08:24 INFO - Tomcat initialized with port 8765 (http)
+02-May-2026 11:08:24 INFO - Initializing ProtocolHandler ["http-nio-8765"]
+02-May-2026 11:08:24 INFO - Starting service [Tomcat]
+02-May-2026 11:08:24 INFO - Starting Servlet engine: [Apache Tomcat/10.1.19]
+02-May-2026 11:08:24 INFO - Initializing Spring embedded WebApplicationContext
+02-May-2026 11:08:24 INFO - Root WebApplicationContext: initialization completed in 5047 ms
+02-May-2026 11:08:25 INFO - HikariPool-1 - Starting...
+02-May-2026 11:08:26 INFO - HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@40779a53
+02-May-2026 11:08:26 INFO - HikariPool-1 - Start completed.
+02-May-2026 11:08:27 INFO - HHH000204: Processing PersistenceUnitInfo [name: default]
+02-May-2026 11:08:27 INFO - HHH000412: Hibernate ORM core version 6.4.4.Final
+02-May-2026 11:08:27 INFO - HHH000026: Second-level cache disabled
+02-May-2026 11:08:28 INFO - No LoadTimeWeaver setup: ignoring JPA class transformer
+02-May-2026 11:08:30 INFO - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+02-May-2026 11:08:30 INFO - Initialized JPA EntityManagerFactory for persistence unit 'default'
+02-May-2026 11:08:33 INFO - Hibernate is in classpath; If applicable, HQL parser will be used.
+02-May-2026 11:08:39 WARN - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+02-May-2026 11:08:43 INFO - LiveReload server is running on port 35729
+02-May-2026 11:08:43 INFO - Starting ProtocolHandler ["http-nio-8765"]
+02-May-2026 11:08:43 INFO - Tomcat started on port 8765 (http) with context path ''
+02-May-2026 11:10:16 INFO - Initializing Spring DispatcherServlet 'dispatcherServlet'
+02-May-2026 11:10:16 INFO - Initializing Servlet 'dispatcherServlet'
+02-May-2026 11:10:16 INFO - Completed initialization in 2 ms

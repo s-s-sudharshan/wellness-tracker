@@ -48,7 +48,7 @@ public class ChallengeServiceImpl implements ChallengeService {
     @Autowired
     private ChallengeParticipantRepository participantRepository;
 
-    // US 13 - Manager creates a new challenge
+    // US 13 - Manager or HR creates a new challenge
     @Override
     public Integer createChallenge(ChallengeRequestDTO requestDTO)
             throws WellnessTrackerException {
@@ -56,8 +56,22 @@ public class ChallengeServiceImpl implements ChallengeService {
         User creator = optional.orElseThrow(
                 () -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
 
+        // Only MANAGER and HR can create challenges; EMPLOYEE cannot
         if (Role.EMPLOYEE.equals(creator.getRole())) {
             throw new WellnessTrackerException("Service.NOT_A_MANAGER_OR_HR");
+        }
+
+        // Both MANAGER and HR can only create DEPARTMENT challenges scoped to their
+        // own department. COMPANY_WIDE challenges are unrestricted for both roles.
+        boolean isManagerOrHr = Role.MANAGER.equals(creator.getRole())
+                || Role.HR.equals(creator.getRole());
+        if (isManagerOrHr
+                && requestDTO.getVisibilityType() == VisibilityType.DEPARTMENT) {
+            Integer creatorDeptId = creator.getDepartment() != null
+                    ? creator.getDepartment().getDepartmentId() : null;
+            if (!requestDTO.getDepartmentId().equals(creatorDeptId)) {
+                throw new WellnessTrackerException("Service.HR_CHALLENGE_DEPT_MISMATCH");
+            }
         }
 
         if (!requestDTO.getEndDate().isAfter(requestDTO.getStartDate())) {
@@ -104,29 +118,29 @@ public class ChallengeServiceImpl implements ChallengeService {
     @Override
     public ChallengeResponseDTO updateChallenge(Integer challengeId,
             ChallengeUpdateRequestDTO requestDTO) throws WellnessTrackerException {
- 
+
         // Sync first so challenge.getStatus() is always accurate
         statusSyncService.syncStatuses();
- 
+
         Optional<Challenge> optional = challengeRepository.findById(challengeId);
         Challenge challenge = optional.orElseThrow(
                 () -> new WellnessTrackerException("Service.CHALLENGE_NOT_FOUND"));
- 
+
         // Only the original creator may edit
         if (!challenge.getCreatedBy().getUserId().equals(requestDTO.getRequestingUserId())) {
             throw new WellnessTrackerException("Service.CHALLENGE_EDIT_FORBIDDEN");
         }
- 
+
         // Only UPCOMING challenges are editable
         if (!challenge.getStatus().equals(ChallengeStatus.UPCOMING)) {
             throw new WellnessTrackerException("Service.CHALLENGE_NOT_EDITABLE");
         }
- 
+
         // endDate must remain after the immutable startDate
         if (!requestDTO.getEndDate().isAfter(challenge.getStartDate())) {
             throw new WellnessTrackerException("Service.INVALID_CHALLENGE_DATES");
         }
- 
+
         challenge.setTitle(requestDTO.getTitle());
         challenge.setDescription(requestDTO.getDescription());
         challenge.setGoalValue(requestDTO.getGoalValue());
@@ -134,46 +148,46 @@ public class ChallengeServiceImpl implements ChallengeService {
         challenge.setEndDate(requestDTO.getEndDate());
         challenge.setIsFeatured(
                 requestDTO.getIsFeatured() != null && requestDTO.getIsFeatured());
- 
+
         // Re-derive status in case the new endDate now falls in the past
         challenge.setStatus(resolveStatus(challenge.getStartDate(), requestDTO.getEndDate()));
- 
+
         return mapToDTO(challengeRepository.save(challenge));
     }
-    
+
     // US 13 - Delete an UPCOMING challenge they created.
     @Override
     public void deleteChallenge(Integer challengeId, Integer requestingUserId)
             throws WellnessTrackerException {
- 
+
         // Sync before read so status is accurate
         statusSyncService.syncStatuses();
- 
+
         Optional<Challenge> optional = challengeRepository.findById(challengeId);
         Challenge challenge = optional.orElseThrow(
                 () -> new WellnessTrackerException("Service.CHALLENGE_NOT_FOUND"));
- 
+
         // Only the original creator may delete
         if (!challenge.getCreatedBy().getUserId().equals(requestingUserId)) {
             throw new WellnessTrackerException("Service.CHALLENGE_DELETE_FORBIDDEN");
         }
- 
+
         // Only UPCOMING challenges can be deleted
         if (!challenge.getStatus().equals(ChallengeStatus.UPCOMING)) {
             throw new WellnessTrackerException("Service.CHALLENGE_NOT_DELETABLE");
         }
- 
+
         // Block deletion if participants have joined
         List<ChallengeParticipant> participants =
                 participantRepository.findByChallenge_ChallengeIdOrderByJoinedAtAsc(challengeId);
         if (!participants.isEmpty()) {
             throw new WellnessTrackerException("Service.CHALLENGE_HAS_PARTICIPANTS");
         }
- 
+
         challengeRepository.deleteById(challengeId);
     }
-    
-    // US 13 - Get all challenges created by a manager
+
+    // US 13 - Get all challenges created by a manager or HR user
     @Override
     @Transactional(readOnly = false)
     public List<ChallengeResponseDTO> getChallengesByManager(Integer managerId)
@@ -208,7 +222,7 @@ public class ChallengeServiceImpl implements ChallengeService {
     public ChallengeResponseDTO getChallengeById(Integer challengeId, Integer requestingUserId)
             throws WellnessTrackerException {
 
-    	statusSyncService.syncStatuses();
+        statusSyncService.syncStatuses();
 
         Optional<Challenge> optional = challengeRepository.findById(challengeId);
         Challenge challenge = optional.orElseThrow(

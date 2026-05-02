@@ -2,6 +2,7 @@ package com.infy.repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
@@ -10,64 +11,61 @@ import org.springframework.data.repository.query.Param;
 import com.infy.entity.ActivityLog;
 import com.infy.enums.ActivityType;
 
-public interface ActivityLogRepository extends CrudRepository<ActivityLog, Integer>{
-	
-	List<ActivityLog> findByUser_UserIdOrderByActivityDateDescCreatedAtDesc(Integer userId);
-	
-	List<ActivityLog> findByUser_UserIdAndActivityDateBetweenOrderByActivityDateDesc(
-			Integer userId, LocalDate fromDate, LocalDate toDate);
-	
-	@Query("SELECT a.activityType, SUM(a.activityValue), a.unit " + 
-		    "FROM ActivityLog a " + 
-			"WHERE a.user.userId = :userId " +
-		    "AND a.activityDate BETWEEN :fromDate AND :toDate " +
-			"GROUP BY a.activityType, a.unit")
-	List<Object[]> findSummaryByUserAndDateRange(
-			 @Param("userId") Integer userId,
-			 @Param("fromDate") LocalDate fromDate,
-			 @Param("toDate") LocalDate toDate);
-	
-	Integer countByUser_UserIdAndActivityDateBetween(
-			Integer userId, LocalDate fromDate, LocalDate toDate);
-	
-	// US 02 - Day-wise trend points for a user, optionally filtered by activity type.
-	// When metricType is null the caller filters in Java; the query always returns all types
-	// so the same JPQL works for both the filtered and unfiltered cases.
-	@Query("SELECT a.activityDate, a.activityType, SUM(a.activityValue), a.unit " +
-	       "FROM ActivityLog a " +
-	       "WHERE a.user.userId = :userId " +
-	       "AND a.activityDate BETWEEN :fromDate AND :toDate " +
-	       "GROUP BY a.activityDate, a.activityType, a.unit " +
-	       "ORDER BY a.activityDate ASC")
-	List<Object[]> findTrendByUserAndDateRange(
-	        @Param("userId") Integer userId,
-	        @Param("fromDate") LocalDate fromDate,
-	        @Param("toDate") LocalDate toDate);
-	
-	// US 11 - sum actuals per activity type for weekly progress
-	@Query("SELECT a.activityType, SUM(a.activityValue) " +
-		   "FROM ActivityLog a " +
-		   "WHERE a.user.userId = :userId " +
-		   "AND a.activityDate BETWEEN :fromDate AND :toDate " +
-		   "GROUP BY a.activityType")
-	List<Object[]> findActualsByUserAndDateRange(
-			@Param("userId") Integer userId,
-			@Param("fromDate") LocalDate fromDate,
-			@Param("toDate") LocalDate toDate);
+public interface ActivityLogRepository extends CrudRepository<ActivityLog, Integer> {
 
-	// US 12 - count activities per day for mood correlation
-	@Query("SELECT a.activityDate, COUNT(a) " +
-		   "FROM ActivityLog a " +
-		   "WHERE a.user.userId = :userId " +
-		   "AND a.activityDate BETWEEN :fromDate AND :toDate " +
-		   "GROUP BY a.activityDate")
-	List<Object[]> countActivitiesPerDayByUserAndDateRange(
-			@Param("userId") Integer userId,
-			@Param("fromDate") LocalDate fromDate,
-			@Param("toDate") LocalDate toDate);
-	
+    List<ActivityLog> findByUser_UserIdOrderByActivityDateDescCreatedAtDesc(Integer userId);
+
+    List<ActivityLog> findByUser_UserIdAndActivityDateBetweenOrderByActivityDateDesc(
+            Integer userId, LocalDate fromDate, LocalDate toDate);
+
+    @Query("SELECT a.activityType, SUM(a.activityValue), a.unit " +
+           "FROM ActivityLog a " +
+           "WHERE a.user.userId = :userId " +
+           "AND a.activityDate BETWEEN :fromDate AND :toDate " +
+           "GROUP BY a.activityType, a.unit")
+    List<Object[]> findSummaryByUserAndDateRange(
+            @Param("userId") Integer userId,
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate);
+
+    Integer countByUser_UserIdAndActivityDateBetween(
+            Integer userId, LocalDate fromDate, LocalDate toDate);
+
+    // US 02 - Day-wise trend points for a user, optionally filtered by activity type.
+    @Query("SELECT a.activityDate, a.activityType, SUM(a.activityValue), a.unit " +
+           "FROM ActivityLog a " +
+           "WHERE a.user.userId = :userId " +
+           "AND a.activityDate BETWEEN :fromDate AND :toDate " +
+           "GROUP BY a.activityDate, a.activityType, a.unit " +
+           "ORDER BY a.activityDate ASC")
+    List<Object[]> findTrendByUserAndDateRange(
+            @Param("userId") Integer userId,
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate);
+
+    // US 11 - sum actuals per activity type for weekly progress
+    @Query("SELECT a.activityType, SUM(a.activityValue) " +
+           "FROM ActivityLog a " +
+           "WHERE a.user.userId = :userId " +
+           "AND a.activityDate BETWEEN :fromDate AND :toDate " +
+           "GROUP BY a.activityType")
+    List<Object[]> findActualsByUserAndDateRange(
+            @Param("userId") Integer userId,
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate);
+
+    // US 12 - count activities per day for mood correlation
+    @Query("SELECT a.activityDate, COUNT(a) " +
+           "FROM ActivityLog a " +
+           "WHERE a.user.userId = :userId " +
+           "AND a.activityDate BETWEEN :fromDate AND :toDate " +
+           "GROUP BY a.activityDate")
+    List<Object[]> countActivitiesPerDayByUserAndDateRange(
+            @Param("userId") Integer userId,
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate);
+
     // US 04 - batch fetch actuals for ALL participants of a challenge in one query
-    // Returns: [userId, totalValue] filtered by a specific activityType
     @Query("SELECT a.user.userId, SUM(a.activityValue) " +
            "FROM ActivityLog a " +
            "WHERE a.user.userId IN :userIds " +
@@ -79,4 +77,9 @@ public interface ActivityLogRepository extends CrudRepository<ActivityLog, Integ
             @Param("activityType") ActivityType activityType,
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate);
+
+    // US 01 - ownership check for edit and delete
+    // Returns the log only if it belongs to the given user — enforces ownership at DB level
+    Optional<ActivityLog> findByActivityLogIdAndUser_UserId(
+            Integer activityLogId, Integer userId);
 }

@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.infy.dto.LoginRequestDTO;
 import com.infy.dto.LoginResponseDTO;
 import com.infy.entity.User;
+import com.infy.enums.UserStatus;
 import com.infy.exception.WellnessTrackerException;
 import com.infy.repository.UserRepository;
 
@@ -32,7 +33,7 @@ public class AuthServiceImpl implements AuthService {
 			throw new WellnessTrackerException("Service.INVALID_CREDENTIALS");
 		}
 
-		if (user.getStatus() != com.infy.enums.UserStatus.ACTIVE) {
+		if (!UserStatus.ACTIVE.equals(user.getStatus())) {
 			throw new WellnessTrackerException("Service.ACCOUNT_INACTIVE");
 		}
 

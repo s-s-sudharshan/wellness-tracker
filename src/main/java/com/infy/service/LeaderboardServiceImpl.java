@@ -10,6 +10,7 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.infy.dto.LeaderboardEntryDTO;
 import com.infy.dto.LeaderboardResponseDTO;
@@ -24,75 +25,67 @@ import com.infy.repository.ChallengeParticipantRepository;
 import com.infy.repository.ChallengeRepository;
 import com.infy.repository.UserRepository;
 
-import jakarta.transaction.Transactional;
-
 @Service
 @Transactional
 public class LeaderboardServiceImpl implements LeaderboardService {
 
-	@Autowired
-	public ChallengeRepository challengeRepository;
-	
-	@Autowired
-	public ChallengeParticipantRepository participantRepository;
-	
-	@Autowired
-	public ActivityLogRepository activityLogRepository;
-	
-	@Autowired
-	public UserRepository userRepository;
-	
-	@Autowired
-	public ChallengeStatusSyncService statusSyncService;
-	
-	@Override
-	public LeaderboardResponseDTO getLeaderboard(Integer challengeId, Integer requestingUserId)
-			throws WellnessTrackerException {
-		
-		//sync the status of the challenges
-		 statusSyncService.syncStatuses();
+    @Autowired
+    public ChallengeRepository challengeRepository;
 
-	     Optional<Challenge> challengeOptional = challengeRepository.findById(challengeId);
-	     Challenge challenge = challengeOptional.orElseThrow(
-              () -> new WellnessTrackerException("Service.CHALLENGE_NOT_FOUND"));
+    @Autowired
+    public ChallengeParticipantRepository participantRepository;
 
-	     Optional<User> userOptional = userRepository.findById(requestingUserId);
-	     User requestingUser = userOptional.orElseThrow(
-              () -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
-		
-	     //checking if user is from the same department the challenge is assigned to
-	     if (challenge.getVisibilityType().equals(VisibilityType.DEPARTMENT)) {
-	            Integer challengeDeptId = challenge.getDepartment() != null
-	                    ? challenge.getDepartment().getDepartmentId()
-	                    : null;
-	            Integer userDeptId = requestingUser.getDepartment() != null
-	                    ? requestingUser.getDepartment().getDepartmentId()
-	                    : null;
+    @Autowired
+    public ActivityLogRepository activityLogRepository;
 
-	            boolean inSameDepartment = challengeDeptId != null
-	                    && challengeDeptId.equals(userDeptId);
+    @Autowired
+    public UserRepository userRepository;
 
-	            boolean isCreator = challenge.getCreatedBy().getUserId().equals(requestingUserId);
+    @Autowired
+    public ChallengeStatusSyncService statusSyncService;
 
-	            boolean isParticipant = participantRepository
-	                    .findByChallenge_ChallengeIdAndUser_UserId(challengeId, requestingUserId)
-	                    .isPresent();
+    @Override
+    public LeaderboardResponseDTO getLeaderboard(Integer challengeId, Integer requestingUserId)
+            throws WellnessTrackerException {
 
-	            if (!inSameDepartment && !isParticipant && !isCreator) {
-	                throw new WellnessTrackerException("Service.LEADERBOARD_ACCESS_DENIED");
-	            }
-	      }
-	     
-	     //Fetching participants by joining date
-	     List<ChallengeParticipant> participants = participantRepository
-	                .findByChallenge_ChallengeIdOrderByJoinedAtAsc(challengeId);
+        statusSyncService.syncStatuses();
 
-	        if (participants.isEmpty()) {
-	            throw new WellnessTrackerException("Service.NO_PARTICIPANTS_FOUND");
-	        }
-	    
-	    // Determine effective date range for activity calculation
-        // UPCOMING: toDate ends up before fromDate — set equal so query returns nothing
+        Optional<Challenge> challengeOptional = challengeRepository.findById(challengeId);
+        Challenge challenge = challengeOptional.orElseThrow(
+                () -> new WellnessTrackerException("Service.CHALLENGE_NOT_FOUND"));
+
+        Optional<User> userOptional = userRepository.findById(requestingUserId);
+        User requestingUser = userOptional.orElseThrow(
+                () -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
+
+        // DEPARTMENT challenge: same-dept OR creator OR existing participant
+        if (challenge.getVisibilityType().equals(VisibilityType.DEPARTMENT)) {
+            Integer challengeDeptId = challenge.getDepartment() != null
+                    ? challenge.getDepartment().getDepartmentId() : null;
+            Integer userDeptId = requestingUser.getDepartment() != null
+                    ? requestingUser.getDepartment().getDepartmentId() : null;
+
+            boolean inSameDepartment = challengeDeptId != null
+                    && challengeDeptId.equals(userDeptId);
+            boolean isCreator = challenge.getCreatedBy().getUserId().equals(requestingUserId);
+            boolean isParticipant = participantRepository
+                    .findByChallenge_ChallengeIdAndUser_UserId(challengeId, requestingUserId)
+                    .isPresent();
+
+            if (!inSameDepartment && !isParticipant && !isCreator) {
+                throw new WellnessTrackerException("Service.LEADERBOARD_ACCESS_DENIED");
+            }
+        }
+
+        List<ChallengeParticipant> participants = participantRepository
+                .findByChallenge_ChallengeIdOrderByJoinedAtAsc(challengeId);
+
+        if (participants.isEmpty()) {
+            throw new WellnessTrackerException("Service.NO_PARTICIPANTS_FOUND");
+        }
+
+        // Determine effective date range for activity calculation.
+        // UPCOMING: toDate ends up before fromDate — clamp equal so query returns nothing.
         LocalDate today = LocalDate.now();
         LocalDate fromDate = challenge.getStartDate();
         LocalDate toDate = challenge.getEndDate().isAfter(today)
@@ -129,9 +122,9 @@ public class LeaderboardServiceImpl implements LeaderboardService {
         // Build unsorted entry list
         List<LeaderboardEntryDTO> entries = new ArrayList<>();
         for (ChallengeParticipant p : participants) {
-            Integer userId    = p.getUser().getUserId();
+            Integer userId     = p.getUser().getUserId();
             double actualValue = actualByUser.getOrDefault(userId, 0.0);
-            int progressPct   = calcPct(actualValue, challenge.getGoalValue());
+            int progressPct    = calcPct(actualValue, challenge.getGoalValue());
 
             LeaderboardEntryDTO entry = new LeaderboardEntryDTO();
             entry.setParticipantName(
@@ -179,7 +172,7 @@ public class LeaderboardServiceImpl implements LeaderboardService {
             }
         }
 
-        // US04 P2 Fix 2 — clamp daysRemaining to 0 for completed/past-end challenges
+        // Clamp daysRemaining to 0 for completed/past-end challenges
         long rawDaysRemaining = ChronoUnit.DAYS.between(today, challenge.getEndDate());
         int daysRemaining = (int) Math.max(0, rawDaysRemaining);
 
@@ -202,8 +195,8 @@ public class LeaderboardServiceImpl implements LeaderboardService {
 
         return response;
     }
-	
-	private String resolveUnit(ActivityType metricType) {
+
+    private String resolveUnit(ActivityType metricType) {
         return switch (metricType) {
             case STEPS      -> "steps";
             case WORKOUT    -> "minutes";
@@ -219,5 +212,4 @@ public class LeaderboardServiceImpl implements LeaderboardService {
         int pct = (int) ((actual / goal) * 100);
         return Math.min(pct, 100);
     }
-	
 }
