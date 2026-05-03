@@ -8,6 +8,7 @@ import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 
 import com.infy.entity.ChallengeParticipant;
+import com.infy.enums.ParticipantStatus;
 
 public interface ChallengeParticipantRepository extends CrudRepository<ChallengeParticipant, Integer> {
 
@@ -28,4 +29,12 @@ public interface ChallengeParticipantRepository extends CrudRepository<Challenge
 
     // US 04 (prep) - Get all participants of a challenge for leaderboard
     List<ChallengeParticipant> findByChallenge_ChallengeIdOrderByJoinedAtAsc(Integer challengeId);
+    
+    // US 05 — Badge queries
+   
+    // Total challenges ever joined by a user (any status) — CHALLENGES_JOINED badge
+    Integer countByUser_UserId(Integer userId);
+ 
+    // Total challenges completed by a user — CHALLENGES_COMPLETED badge
+    Integer countByUser_UserIdAndStatus(Integer userId, ParticipantStatus status);
 }

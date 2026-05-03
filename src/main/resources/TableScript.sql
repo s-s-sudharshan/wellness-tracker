@@ -348,3 +348,72 @@ INSERT INTO activity_logs (user_id, activity_type, activity_date, activity_value
 -- Meditation: 10 min x 2 days = 20 min (below 30 — rule fires)
 (2, 'MEDITATION', CURDATE(),                     10.0, 'minutes'),
 (2, 'MEDITATION', CURDATE() - INTERVAL 1 DAY,    10.0, 'minutes');
+
+-- ============================================================
+-- BADGES TABLE — add to your existing TableScript.sql
+-- criteria_type maps to CriteriaType enum (VARCHAR)
+-- criteria_value is the threshold DECIMAL(10,2)
+-- ============================================================
+
+-- ============================================================
+-- SEED BADGES — test set covering all 14 criteria types
+-- Add more via POST /wellness/badges after the app is running
+-- ============================================================
+
+INSERT INTO badges (title, description, criteria_type, criteria_value, badge_icon, badge_color) VALUES
+
+-- All-time steps
+('First Steps',       'Log a lifetime total of 50,000 steps.',          'STEPS',       50000, 'bi-person-walking',       '#0d6efd'),
+('Step Master',       'Log a lifetime total of 100,000 steps.',         'STEPS',      100000, 'bi-trophy',               '#6610f2'),
+
+-- All-time water
+('Hydration Starter', 'Log a lifetime total of 100 liters of water.',   'WATER',         100, 'bi-droplet',              '#0dcaf0'),
+('Hydration Hero',    'Log a lifetime total of 500 liters of water.',   'WATER',         500, 'bi-droplet-fill',         '#0d6efd'),
+
+-- All-time workout
+('Workout Starter',   'Log 120 total minutes of workout.',              'WORKOUT',       120, 'bi-lightning',            '#ffc107'),
+('Workout Warrior',   'Log 500 total minutes of workout.',              'WORKOUT',       500, 'bi-lightning-charge-fill','#dc3545'),
+
+-- All-time meditation
+('Mindful Starter',   'Log 60 total minutes of meditation.',            'MEDITATION',     60, 'bi-peace',                '#20c997'),
+('Zen Master',        'Log 300 total minutes of meditation.',           'MEDITATION',    300, 'bi-yin-yang',             '#6610f2'),
+
+-- All-time sleep
+('Rest Starter',      'Log 56 total hours of sleep.',                   'SLEEP',          56, 'bi-moon',                 '#6f42c1'),
+('Rest Champion',     'Log 200 total hours of sleep.',                  'SLEEP',         200, 'bi-moon-stars-fill',      '#6610f2'),
+
+-- Daily personal best — steps
+('Step Sprinter',     'Walk 10,000 steps in a single day.',             'DAILY_STEPS', 10000, 'bi-rocket',               '#fd7e14'),
+('Step Dasher',       'Walk 20,000 steps in a single day.',             'DAILY_STEPS', 20000, 'bi-rocket-takeoff',       '#dc3545'),
+
+-- Daily personal best — workout
+('Sweat Session',     'Complete 60 minutes of workout in a single day.','DAILY_WORKOUT',  60, 'bi-heart-pulse',          '#d63384'),
+('Workout Peak',      'Complete 120 minutes of workout in a single day.','DAILY_WORKOUT',120, 'bi-heart-pulse-fill',     '#dc3545'),
+
+-- Weekly personal best — steps
+('Active Week',       'Log 70,000 steps in a single week.',             'WEEKLY_STEPS',70000, 'bi-calendar-check',       '#198754'),
+('Step Week Legend',  'Log 150,000 steps in a single week.',            'WEEKLY_STEPS',150000,'bi-calendar-fill',        '#6610f2'),
+
+-- Weekly personal best — workout
+('Weekly Grind',      'Log 150 minutes of workout in a single week.',   'WEEKLY_WORKOUT',150, 'bi-fire',                 '#fd7e14'),
+('Workout Week Hero', 'Log 300 minutes of workout in a single week.',   'WEEKLY_WORKOUT',300, 'bi-fire',                 '#dc3545'),
+
+-- Streak
+('3-Day Streak',      'Log activity for 3 consecutive days.',           'STREAK',          3, 'bi-fire',                 '#fd7e14'),
+('7-Day Streak',      'Log activity for 7 consecutive days.',           'STREAK',          7, 'bi-fire',                 '#dc3545'),
+('30-Day Streak',     'Log activity for 30 consecutive days.',          'STREAK',         30, 'bi-fire',                 '#6f42c1'),
+
+-- Challenges joined
+('Team Player',       'Join your first challenge.',                     'CHALLENGES_JOINED',  1, 'bi-people',            '#0d6efd'),
+('Challenge Seeker',  'Join 5 challenges.',                             'CHALLENGES_JOINED',  5, 'bi-people-fill',       '#198754'),
+
+-- Challenges completed
+('First Win',         'Complete your first challenge.',                 'CHALLENGES_COMPLETED',1,'bi-award',             '#ffc107'),
+('Challenge Champion','Complete 5 challenges.',                         'CHALLENGES_COMPLETED',5,'bi-award-fill',        '#198754'),
+
+-- Total logs
+('Dedicated Logger',  'Log 10 activities of any type.',                 'TOTAL_LOGS',     10, 'bi-journal-check',        '#0dcaf0'),
+('Consistency King',  'Log 50 activities of any type.',                 'TOTAL_LOGS',     50, 'bi-journal-richtext',     '#6610f2'),
+
+-- Activity variety
+('All-Rounder',       'Log all 5 different activity types at least once.','ACTIVITY_VARIETY',5,'bi-grid-fill',           '#fd7e14');
