@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,15 +17,19 @@ import com.infy.dto.ActiveChallengeResponseDTO;
 import com.infy.dto.ChallengeRequestDTO;
 import com.infy.dto.ChallengeResponseDTO;
 import com.infy.dto.ChallengeUpdateRequestDTO;
+import com.infy.entity.Badge;
 import com.infy.entity.Challenge;
 import com.infy.entity.ChallengeParticipant;
 import com.infy.entity.Department;
 import com.infy.entity.User;
 import com.infy.enums.ActivityType;
 import com.infy.enums.ChallengeStatus;
+import com.infy.enums.NotificationType;
 import com.infy.enums.Role;
+import com.infy.enums.UserStatus;
 import com.infy.enums.VisibilityType;
 import com.infy.exception.WellnessTrackerException;
+import com.infy.repository.BadgeRepository;
 import com.infy.repository.ChallengeParticipantRepository;
 import com.infy.repository.ChallengeRepository;
 import com.infy.repository.DepartmentRepository;
@@ -32,6 +38,8 @@ import com.infy.repository.UserRepository;
 @Service
 @Transactional
 public class ChallengeServiceImpl implements ChallengeService {
+
+    private static final Log LOGGER = LogFactory.getLog(ChallengeServiceImpl.class);
 
     @Autowired
     private ChallengeRepository challengeRepository;
@@ -47,8 +55,15 @@ public class ChallengeServiceImpl implements ChallengeService {
 
     @Autowired
     private ChallengeParticipantRepository participantRepository;
+    
+    @Autowired
+    private BadgeRepository badgeRepository;
 
-    // US 13 - Manager or HR creates a new challenge
+    @Autowired
+    private NotificationService notificationService;
+
+    // US 13 - Manager or HR creates a new challenge.
+    // US 10 - Broadcasts a notification to eligible active users after creation.
     @Override
     public Integer createChallenge(ChallengeRequestDTO requestDTO)
             throws WellnessTrackerException {
@@ -56,13 +71,22 @@ public class ChallengeServiceImpl implements ChallengeService {
         User creator = optional.orElseThrow(
                 () -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
 
-        // Only MANAGER and HR can create challenges; EMPLOYEE cannot
         if (Role.EMPLOYEE.equals(creator.getRole())) {
             throw new WellnessTrackerException("Service.NOT_A_MANAGER_OR_HR");
         }
 
-        // Both MANAGER and HR can only create DEPARTMENT challenges scoped to their
-        // own department. COMPANY_WIDE challenges are unrestricted for both roles.
+        // Null checks on departmentId come BEFORE any .equals() call that uses it.
+        if (requestDTO.getVisibilityType() == VisibilityType.DEPARTMENT
+                && requestDTO.getDepartmentId() == null) {
+            throw new WellnessTrackerException("Service.DEPARTMENT_REQUIRED_FOR_VISIBILITY");
+        }
+        if (requestDTO.getVisibilityType() == VisibilityType.COMPANY_WIDE
+                && requestDTO.getDepartmentId() != null) {
+            throw new WellnessTrackerException(
+                    "Service.DEPARTMENT_NOT_ALLOWED_FOR_COMPANY_WIDE");
+        }
+
+        // departmentId guaranteed non-null here when visibilityType is DEPARTMENT
         boolean isManagerOrHr = Role.MANAGER.equals(creator.getRole())
                 || Role.HR.equals(creator.getRole());
         if (isManagerOrHr
@@ -76,16 +100,6 @@ public class ChallengeServiceImpl implements ChallengeService {
 
         if (!requestDTO.getEndDate().isAfter(requestDTO.getStartDate())) {
             throw new WellnessTrackerException("Service.INVALID_CHALLENGE_DATES");
-        }
-
-        if (requestDTO.getVisibilityType() == VisibilityType.DEPARTMENT
-                && requestDTO.getDepartmentId() == null) {
-            throw new WellnessTrackerException("Service.DEPARTMENT_REQUIRED_FOR_VISIBILITY");
-        }
-        if (requestDTO.getVisibilityType() == VisibilityType.COMPANY_WIDE
-                && requestDTO.getDepartmentId() != null) {
-            throw new WellnessTrackerException(
-                    "Service.DEPARTMENT_NOT_ALLOWED_FOR_COMPANY_WIDE");
         }
 
         Challenge challenge = new Challenge();
@@ -110,8 +124,51 @@ public class ChallengeServiceImpl implements ChallengeService {
                     () -> new WellnessTrackerException("Service.DEPARTMENT_NOT_FOUND"));
             challenge.setDepartment(department);
         }
+        
+        if (requestDTO.getRewardBadgeId() != null) {
+        	Optional<Badge> badge = badgeRepository.findById(requestDTO.getRewardBadgeId());
+        	badge.orElseThrow(() -> new WellnessTrackerException("Service.BADGE_NOT_FOUND"));
+        	challenge.setRewardBadgeId(requestDTO.getRewardBadgeId());
+        }
 
-        return challengeRepository.save(challenge).getChallengeId();
+        Challenge saved = challengeRepository.save(challenge);
+
+        // US 10 — broadcast notification to eligible active users.
+        // Fully silent — failure must never block challenge creation.
+        broadcastNewChallengeNotification(saved, requestDTO.getVisibilityType(),
+                requestDTO.getDepartmentId());
+
+        return saved.getChallengeId();
+    }
+
+    // Sends a CHALLENGE notification to all active users eligible to see this challenge.
+    // referenceId is null — new-challenge broadcast is a one-time event per creation,
+    // no dedup needed. Any exception is logged and swallowed.
+    private void broadcastNewChallengeNotification(Challenge challenge,
+            VisibilityType visibilityType, Integer departmentId) {
+        try {
+            List<User> recipients;
+            if (visibilityType == VisibilityType.COMPANY_WIDE) {
+                recipients = userRepository.findByStatus(UserStatus.ACTIVE);
+            } else {
+                recipients = userRepository.findByDepartment_DepartmentIdAndStatus(
+                        departmentId, UserStatus.ACTIVE);
+            }
+
+            String title   = "New Challenge: " + challenge.getTitle();
+            String message = challenge.getDescription()
+                    + " Join now before " + challenge.getEndDate() + ".";
+
+            for (User recipient : recipients) {
+                // null referenceId — broadcast is fired once at creation, no dedup required
+                notificationService.createNotification(
+                        recipient.getUserId(), NotificationType.CHALLENGE,
+                        title, message, null);
+            }
+        } catch (Exception e) {
+            LOGGER.error("Notification broadcast failed for challengeId="
+                    + challenge.getChallengeId(), e);
+        }
     }
 
     // US 13 - Edit an UPCOMING challenge they created.
@@ -119,24 +176,20 @@ public class ChallengeServiceImpl implements ChallengeService {
     public ChallengeResponseDTO updateChallenge(Integer challengeId,
             ChallengeUpdateRequestDTO requestDTO) throws WellnessTrackerException {
 
-        // Sync first so challenge.getStatus() is always accurate
         statusSyncService.syncStatuses();
 
         Optional<Challenge> optional = challengeRepository.findById(challengeId);
         Challenge challenge = optional.orElseThrow(
                 () -> new WellnessTrackerException("Service.CHALLENGE_NOT_FOUND"));
 
-        // Only the original creator may edit
         if (!challenge.getCreatedBy().getUserId().equals(requestDTO.getRequestingUserId())) {
             throw new WellnessTrackerException("Service.CHALLENGE_EDIT_FORBIDDEN");
         }
 
-        // Only UPCOMING challenges are editable
         if (!challenge.getStatus().equals(ChallengeStatus.UPCOMING)) {
             throw new WellnessTrackerException("Service.CHALLENGE_NOT_EDITABLE");
         }
 
-        // endDate must remain after the immutable startDate
         if (!requestDTO.getEndDate().isAfter(challenge.getStartDate())) {
             throw new WellnessTrackerException("Service.INVALID_CHALLENGE_DATES");
         }
@@ -149,7 +202,6 @@ public class ChallengeServiceImpl implements ChallengeService {
         challenge.setIsFeatured(
                 requestDTO.getIsFeatured() != null && requestDTO.getIsFeatured());
 
-        // Re-derive status in case the new endDate now falls in the past
         challenge.setStatus(resolveStatus(challenge.getStartDate(), requestDTO.getEndDate()));
 
         return mapToDTO(challengeRepository.save(challenge));
@@ -160,24 +212,20 @@ public class ChallengeServiceImpl implements ChallengeService {
     public void deleteChallenge(Integer challengeId, Integer requestingUserId)
             throws WellnessTrackerException {
 
-        // Sync before read so status is accurate
         statusSyncService.syncStatuses();
 
         Optional<Challenge> optional = challengeRepository.findById(challengeId);
         Challenge challenge = optional.orElseThrow(
                 () -> new WellnessTrackerException("Service.CHALLENGE_NOT_FOUND"));
 
-        // Only the original creator may delete
         if (!challenge.getCreatedBy().getUserId().equals(requestingUserId)) {
             throw new WellnessTrackerException("Service.CHALLENGE_DELETE_FORBIDDEN");
         }
 
-        // Only UPCOMING challenges can be deleted
         if (!challenge.getStatus().equals(ChallengeStatus.UPCOMING)) {
             throw new WellnessTrackerException("Service.CHALLENGE_NOT_DELETABLE");
         }
 
-        // Block deletion if participants have joined
         List<ChallengeParticipant> participants =
                 participantRepository.findByChallenge_ChallengeIdOrderByJoinedAtAsc(challengeId);
         if (!participants.isEmpty()) {
@@ -232,7 +280,6 @@ public class ChallengeServiceImpl implements ChallengeService {
         User requestingUser = userOptional.orElseThrow(
                 () -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
 
-        // DEPARTMENT challenges: same-dept OR creator OR existing participant
         if (challenge.getVisibilityType().equals(VisibilityType.DEPARTMENT)) {
             Integer challengeDeptId = challenge.getDepartment() != null
                     ? challenge.getDepartment().getDepartmentId()
@@ -243,10 +290,8 @@ public class ChallengeServiceImpl implements ChallengeService {
 
             boolean inSameDepartment = challengeDeptId != null
                     && challengeDeptId.equals(userDeptId);
-
             boolean isCreator = challenge.getCreatedBy().getUserId()
                     .equals(requestingUserId);
-
             boolean isParticipant = participantRepository
                     .findByChallenge_ChallengeIdAndUser_UserId(challengeId, requestingUserId)
                     .isPresent();
@@ -295,7 +340,6 @@ public class ChallengeServiceImpl implements ChallengeService {
         return responseList;
     }
 
-    // Derives current status purely from dates — used at creation time
     private ChallengeStatus resolveStatus(LocalDate startDate, LocalDate endDate) {
         LocalDate today = LocalDate.now();
         if (today.isBefore(startDate)) return ChallengeStatus.UPCOMING;
@@ -318,11 +362,14 @@ public class ChallengeServiceImpl implements ChallengeService {
         dto.setEndDate(c.getEndDate());
         dto.setVisibilityType(c.getVisibilityType());
         dto.setIsFeatured(c.getIsFeatured());
-        dto.setStatus(c.getStatus());   // accurate after syncStatuses()
+        dto.setStatus(c.getStatus());
         dto.setCreatedAt(c.getCreatedAt());
         if (c.getDepartment() != null) {
             dto.setDepartmentId(c.getDepartment().getDepartmentId());
             dto.setDepartmentName(c.getDepartment().getDepartmentName());
+        }
+        if (c.getRewardBadgeId() != null) {
+        	dto.setRewardBadgeId(c.getRewardBadgeId());
         }
         return dto;
     }
@@ -344,6 +391,9 @@ public class ChallengeServiceImpl implements ChallengeService {
         dto.setStatus(c.getStatus());
         if (c.getDepartment() != null) {
             dto.setDepartmentName(c.getDepartment().getDepartmentName());
+        }
+        if (c.getRewardBadgeId() != null) {
+        	dto.setRewardBadgeId(c.getRewardBadgeId());
         }
         return dto;
     }

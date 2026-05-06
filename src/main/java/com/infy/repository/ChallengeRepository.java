@@ -58,4 +58,14 @@ public interface ChallengeRepository extends CrudRepository<Challenge, Integer> 
            "WHERE c.status != 'COMPLETED' " +
            "AND c.endDate < :today")
     int completeExpiredChallenges(@Param("today") LocalDate today);
+    
+    // US 10 - Challenges that started today and are now ACTIVE.
+    // Used after bulk sync to identify which challenges just became active
+    // so participants can be notified. startDate = today is a narrow window —
+    // each challenge only qualifies here on its first day, which combined with
+    // the exists duplicate guard in NotificationRepository prevents repeat notifications.
+    @Query("SELECT c FROM Challenge c " +
+           "WHERE c.startDate = :today " +
+           "AND c.status = 'ACTIVE'")
+    List<Challenge> findActivatedToday(@Param("today") LocalDate today);
 }

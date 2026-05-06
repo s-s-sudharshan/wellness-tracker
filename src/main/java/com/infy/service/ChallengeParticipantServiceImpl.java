@@ -22,6 +22,7 @@ import com.infy.entity.ChallengeParticipant;
 import com.infy.entity.User;
 import com.infy.enums.ActivityType;
 import com.infy.enums.ChallengeStatus;
+import com.infy.enums.NotificationType;
 import com.infy.enums.VisibilityType;
 import com.infy.exception.WellnessTrackerException;
 import com.infy.repository.ActivityLogRepository;
@@ -48,7 +49,11 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
     @Autowired
     private ChallengeStatusSyncService statusSyncService;
 
+    @Autowired
+    private NotificationService notificationService;
+
     // US 03 - Join challenge
+    // US 10 - Sends a confirmation notification to the joining user
     @Override
     public Integer joinChallenge(JoinChallengeRequestDTO requestDTO)
             throws WellnessTrackerException {
@@ -63,14 +68,12 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
                 () -> new WellnessTrackerException("Service.CHALLENGE_NOT_FOUND"));
 
         // Date-based guard catches stale status where endDate has passed
-        // but DB status column was not yet updated to COMPLETED
         if (LocalDate.now().isAfter(challenge.getEndDate())
                 || challenge.getStatus().equals(ChallengeStatus.COMPLETED)) {
             throw new WellnessTrackerException("Service.CHALLENGE_ALREADY_COMPLETED");
         }
 
-        // Enforce department visibility on join — policy:
-        //   same-department OR creator
+        // Enforce department visibility on join
         if (challenge.getVisibilityType().equals(VisibilityType.DEPARTMENT)) {
             Integer challengeDeptId = challenge.getDepartment() != null
                     ? challenge.getDepartment().getDepartmentId() : null;
@@ -99,10 +102,24 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
         participant.setChallenge(challenge);
         participant.setUser(user);
 
-        return participantRepository.save(participant).getParticipantId();
+        Integer participantId = participantRepository.save(participant).getParticipantId();
+
+        // US 10 — notify the joining user.
+        // null referenceId — join confirmation is naturally deduped by the
+        // ALREADY_JOINED_CHALLENGE guard above (user can only join once).
+        notificationService.createNotification(
+                requestDTO.getUserId(),
+                NotificationType.CHALLENGE,
+                "You Joined: " + challenge.getTitle(),
+                "You've joined '" + challenge.getTitle() + "'. Good luck!",
+                null);
+
+        return participantId;
     }
 
     // US 03 - Active/upcoming challenge catalog for a user.
+    // Uses syncAndNotifyActivations() so participants are notified when a
+    // challenge they joined goes ACTIVE.
     @Override
     @Transactional(readOnly = false)
     public List<ActiveChallengeResponseDTO> getActiveChallenges(Integer userId)
@@ -111,14 +128,13 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
         User user = userOptional.orElseThrow(
                 () -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
 
-        statusSyncService.syncStatuses();
+        statusSyncService.syncAndNotifyActivations();
 
-        // Date-based query — not dependent on stale status column
         List<Challenge> challenges = challengeRepository.findVisibleChallengesForDepartment(
                 LocalDate.now(), user.getDepartment().getDepartmentId());
 
         if (challenges.isEmpty()) {
-        	return new ArrayList<>();
+            return new ArrayList<>();
         }
 
         List<Integer> challengeIds = new ArrayList<>();
@@ -128,7 +144,7 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
 
         Set<Integer> joinedIdSet = new HashSet<>(
                 participantRepository.findJoinedChallengeIdsByUser(userId, challengeIds));
- 
+
         List<ActiveChallengeResponseDTO> responseList = new ArrayList<>();
         for (Challenge c : challenges) {
             ActiveChallengeResponseDTO dto = mapToActiveDTO(c);
@@ -139,7 +155,8 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
         return responseList;
     }
 
-    // US 03 - All challenges the user has joined, with live progress
+    // US 03 - All challenges the user has joined, with live progress.
+    // Uses syncAndNotifyActivations() for same reason as getActiveChallenges().
     @Override
     @Transactional(readOnly = false)
     public List<MyChallengeResponseDTO> getMyChallenges(Integer userId)
@@ -148,7 +165,7 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
             throw new WellnessTrackerException("Service.USER_NOT_FOUND");
         }
 
-        statusSyncService.syncStatuses();
+        statusSyncService.syncAndNotifyActivations();
 
         List<ChallengeParticipant> participations = participantRepository
                 .findByUser_UserIdOrderByJoinedAtDesc(userId);
@@ -204,7 +221,7 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
             // Derive status live from dates instead of reading stale DB column
             ChallengeStatus liveStatus = resolveStatus(c.getStartDate(), c.getEndDate());
 
-            // daysRemaining: clamped to 0 for ended challenges (never negative in My Challenges)
+            // daysRemaining: clamped to 0 for ended challenges
             long rawDaysRemaining = ChronoUnit.DAYS.between(today, c.getEndDate());
             int daysRemaining = (int) Math.max(0, rawDaysRemaining);
 
@@ -234,7 +251,6 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
         return responseList;
     }
 
-    // Derives current status purely from dates — always accurate regardless of DB column
     private ChallengeStatus resolveStatus(LocalDate startDate, LocalDate endDate) {
         LocalDate today = LocalDate.now();
         if (today.isBefore(startDate)) return ChallengeStatus.UPCOMING;
@@ -259,6 +275,9 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
         dto.setStatus(c.getStatus());
         if (c.getDepartment() != null) {
             dto.setDepartmentName(c.getDepartment().getDepartmentName());
+        }
+        if (c.getRewardBadgeId() != null) {
+        	dto.setRewardBadgeId(c.getRewardBadgeId());
         }
         return dto;
     }

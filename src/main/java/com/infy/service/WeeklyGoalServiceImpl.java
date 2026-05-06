@@ -39,23 +39,15 @@ public class WeeklyGoalServiceImpl implements WeeklyGoalService {
 		Optional<User> optional = userRepository.findById(requestDTO.getUserId());
 		User user = optional.orElseThrow(() -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
 
-		// P1 Fix: Enforce that weekStartDate is a Monday AND falls on next week or later.
-		//
-		// AC says "set goals for the upcoming week" — this means the current week is already
-		// in progress and goals should be set ahead of time for future weeks.
-		// "Next week Monday" = today's Monday + 7 days, regardless of what day today is.
-		//
-		// Two separate checks so the error message can be targeted per violation:
-		//   - Non-Monday date → same error key (date is invalid in both cases)
-		//   - Date before next Monday → same error key (date is in the past or current week)
-		LocalDate nextWeekMonday = LocalDate.now()
-				.with(TemporalAdjusters.next(DayOfWeek.MONDAY));
+		// Current week's Monday — allows setting goals for this week or later
+		LocalDate thisWeekMonday = LocalDate.now()
+		        .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
 
 		if (!requestDTO.getWeekStartDate().getDayOfWeek().equals(DayOfWeek.MONDAY)) {
-			throw new WellnessTrackerException("Service.INVALID_WEEK_START_DATE");
+		    throw new WellnessTrackerException("Service.INVALID_WEEK_START_DATE");
 		}
-		if (requestDTO.getWeekStartDate().isBefore(nextWeekMonday)) {
-			throw new WellnessTrackerException("Service.INVALID_WEEK_START_DATE");
+		if (requestDTO.getWeekStartDate().isBefore(thisWeekMonday)) {
+		    throw new WellnessTrackerException("Service.INVALID_WEEK_START_DATE");
 		}
 
 		Optional<WeeklyGoal> existing = weeklyGoalRepository

@@ -50,4 +50,6 @@ public class ChallengeRequestDTO {
     private Integer departmentId;
 
     private Boolean isFeatured;
+    
+    private Integer rewardBadgeId;
 }

@@ -25,4 +25,5 @@ public class ActiveChallengeResponseDTO {
     private Boolean isFeatured;
     private ChallengeStatus status;
     private Boolean alreadyJoined;
+    private Integer rewardBadgeId;
 }

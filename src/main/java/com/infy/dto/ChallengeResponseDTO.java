@@ -29,4 +29,5 @@ public class ChallengeResponseDTO {
     private Boolean isFeatured;
     private ChallengeStatus status;
     private LocalDateTime createdAt;
+    private Integer rewardBadgeId;
 }

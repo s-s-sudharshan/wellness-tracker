@@ -27,6 +27,7 @@ import com.infy.entity.UserBadge;
 import com.infy.enums.ActivityType;
 import com.infy.enums.BadgeStatus;
 import com.infy.enums.CriteriaType;
+import com.infy.enums.NotificationType;
 import com.infy.enums.ParticipantStatus;
 import com.infy.enums.Role;
 import com.infy.exception.WellnessTrackerException;
@@ -58,6 +59,9 @@ public class BadgeServiceImpl implements BadgeService {
 
     @Autowired
     private ChallengeParticipantRepository participantRepository;
+    
+    @Autowired
+    private NotificationService notificationService;
 
     @Override
     public Integer createBadge(BadgeRequestDTO requestDTO) throws WellnessTrackerException {
@@ -194,7 +198,9 @@ public class BadgeServiceImpl implements BadgeService {
         return result;
     }
 
-    // Award helper — isolated so getUserBadges loop stays readable
+    // Award helper — sends notification only on first award (newlyUnlocked).
+    // referenceId is null — badge notifications are naturally deduped by the
+    // DB unique constraint on user_badges (user_id, badge_id).
     private AwardResult awardIfEligible(User user, Badge badge, Integer userId) {
         UserBadge ub = new UserBadge();
         ub.setUser(user);
@@ -202,18 +208,24 @@ public class BadgeServiceImpl implements BadgeService {
 
         try {
             UserBadge saved = userBadgeRepository.save(ub);
-            // earnedAt set by @PrePersist on UserBadge — no re-fetch needed
+
+            // US 10 — notify user on first badge award.
+            // null referenceId: badge notifications don't need referenceId-based dedup.
+            notificationService.createNotification(
+                    userId,
+                    NotificationType.BADGE,
+                    "Badge Unlocked: " + badge.getTitle(),
+                    "You earned the \"" + badge.getTitle() + "\" badge. "
+                            + badge.getDescription(),
+                    null);
+
             return new AwardResult(saved.getEarnedAt(), true);
         } catch (DataIntegrityViolationException e) {
-            // Check whether this is a duplicate race or a real DB integrity failure.
             Optional<UserBadge> existing = userBadgeRepository
                     .findByUser_UserIdAndBadge_BadgeId(userId, badge.getBadgeId());
             if (existing.isPresent()) {
-                // Confirmed race condition — another request already awarded this badge.
-                // Return the existing row earnedAt so the response is complete.
                 return new AwardResult(existing.get().getEarnedAt(), false);
             }
-            // Row not found — this is a real DB error, not a race. Surface it.
             throw e;
         }
     }
