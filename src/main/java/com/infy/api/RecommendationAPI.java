@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.infy.dto.RecommendationResponseDTO;
 import com.infy.exception.WellnessTrackerException;
 import com.infy.service.RecommendationService;
+
 @CrossOrigin(origins = "http://localhost:3000")
 @RestController
 @RequestMapping("/wellness")

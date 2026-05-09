@@ -28,6 +28,7 @@ import com.infy.exception.WellnessTrackerException;
 import com.infy.repository.ActivityLogRepository;
 import com.infy.repository.ChallengeParticipantRepository;
 import com.infy.repository.ChallengeRepository;
+import com.infy.repository.NotificationRepository;
 import com.infy.repository.UserRepository;
 
 @Service
@@ -45,6 +46,8 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
 
     @Autowired
     private ActivityLogRepository activityLogRepository;
+    
+    private NotificationRepository notificationRepository;
 
     @Autowired
     private ChallengeStatusSyncService statusSyncService;
@@ -220,6 +223,20 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
 
             // Derive status live from dates instead of reading stale DB column
             ChallengeStatus liveStatus = resolveStatus(c.getStartDate(), c.getEndDate());
+            
+            if (progressPct >= 100 && ChallengeStatus.ACTIVE.equals(liveStatus)) {
+                boolean alreadyNotified = notificationRepository
+                    .existsByUser_UserIdAndNotificationTypeAndReferenceId(
+                        userId, NotificationType.CHALLENGE, -c.getChallengeId());
+                if (!alreadyNotified) {
+                    notificationService.createNotification(
+                        userId,
+                        NotificationType.CHALLENGE,
+                        "Challenge Completed: " + c.getTitle(),
+                        "You've reached 100% of your goal in '" + c.getTitle() + "'. Great work!",
+                        -c.getChallengeId());
+                }
+            }
 
             // daysRemaining: clamped to 0 for ended challenges
             long rawDaysRemaining = ChronoUnit.DAYS.between(today, c.getEndDate());
