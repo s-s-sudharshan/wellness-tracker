@@ -627,3 +627,623 @@ org.springframework.web.HttpRequestMethodNotSupportedException: Request method '
 09-May-2026 18:26:49 INFO - LiveReload server is running on port 35729
 09-May-2026 18:26:49 INFO - Starting ProtocolHandler ["http-nio-8765"]
 09-May-2026 18:26:49 INFO - Tomcat started on port 8765 (http) with context path ''
+09-May-2026 18:35:15 INFO - HV000001: Hibernate Validator 8.0.1.Final
+09-May-2026 18:35:15 INFO - Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+09-May-2026 18:35:15 INFO - For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+09-May-2026 18:35:18 INFO - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+09-May-2026 18:35:18 INFO - Finished Spring Data repository scanning in 216 ms. Found 12 JPA repository interfaces.
+09-May-2026 18:35:20 INFO - Tomcat initialized with port 8765 (http)
+09-May-2026 18:35:21 INFO - Initializing ProtocolHandler ["http-nio-8765"]
+09-May-2026 18:35:21 INFO - Starting service [Tomcat]
+09-May-2026 18:35:21 INFO - Starting Servlet engine: [Apache Tomcat/10.1.19]
+09-May-2026 18:35:21 INFO - Initializing Spring embedded WebApplicationContext
+09-May-2026 18:35:21 INFO - Root WebApplicationContext: initialization completed in 5256 ms
+09-May-2026 18:35:21 INFO - HikariPool-1 - Starting...
+09-May-2026 18:35:22 INFO - HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@36dfbb9d
+09-May-2026 18:35:22 INFO - HikariPool-1 - Start completed.
+09-May-2026 18:35:23 INFO - HHH000204: Processing PersistenceUnitInfo [name: default]
+09-May-2026 18:35:23 INFO - HHH000412: Hibernate ORM core version 6.4.4.Final
+09-May-2026 18:35:23 INFO - HHH000026: Second-level cache disabled
+09-May-2026 18:35:24 INFO - No LoadTimeWeaver setup: ignoring JPA class transformer
+09-May-2026 18:35:27 INFO - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+09-May-2026 18:35:27 INFO - Initialized JPA EntityManagerFactory for persistence unit 'default'
+09-May-2026 18:35:29 INFO - Hibernate is in classpath; If applicable, HQL parser will be used.
+09-May-2026 18:35:33 WARN - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+09-May-2026 18:35:34 INFO - LiveReload server is running on port 35729
+09-May-2026 18:35:34 INFO - Starting ProtocolHandler ["http-nio-8765"]
+09-May-2026 18:35:34 INFO - Tomcat started on port 8765 (http) with context path ''
+09-May-2026 18:37:46 INFO - Initializing Spring DispatcherServlet 'dispatcherServlet'
+09-May-2026 18:37:46 INFO - Initializing Servlet 'dispatcherServlet'
+09-May-2026 18:37:46 INFO - Completed initialization in 2 ms
+09-May-2026 18:41:01 INFO - Restarting due to 1 class path change (0 additions, 0 deletions, 1 modification)
+09-May-2026 18:41:01 INFO - Stopping ProtocolHandler ["http-nio-8765"]
+09-May-2026 18:41:01 INFO - Closing JPA EntityManagerFactory for persistence unit 'default'
+09-May-2026 18:41:01 INFO - HikariPool-1 - Shutdown initiated...
+09-May-2026 18:41:01 INFO - HikariPool-1 - Shutdown completed.
+09-May-2026 18:41:01 INFO - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+09-May-2026 18:41:01 INFO - Finished Spring Data repository scanning in 71 ms. Found 12 JPA repository interfaces.
+09-May-2026 18:41:01 INFO - Tomcat initialized with port 8765 (http)
+09-May-2026 18:41:01 INFO - Initializing ProtocolHandler ["http-nio-8765"]
+09-May-2026 18:41:01 INFO - Starting service [Tomcat]
+09-May-2026 18:41:01 INFO - Starting Servlet engine: [Apache Tomcat/10.1.19]
+09-May-2026 18:41:01 INFO - Initializing Spring embedded WebApplicationContext
+09-May-2026 18:41:01 INFO - Root WebApplicationContext: initialization completed in 442 ms
+09-May-2026 18:41:01 INFO - HikariPool-2 - Starting...
+09-May-2026 18:41:01 INFO - HikariPool-2 - Added connection com.mysql.cj.jdbc.ConnectionImpl@5bab0672
+09-May-2026 18:41:01 INFO - HikariPool-2 - Start completed.
+09-May-2026 18:41:01 INFO - HHH000204: Processing PersistenceUnitInfo [name: default]
+09-May-2026 18:41:01 INFO - HHH000026: Second-level cache disabled
+09-May-2026 18:41:01 INFO - No LoadTimeWeaver setup: ignoring JPA class transformer
+09-May-2026 18:41:01 INFO - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+09-May-2026 18:41:01 INFO - Initialized JPA EntityManagerFactory for persistence unit 'default'
+09-May-2026 18:41:02 WARN - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+09-May-2026 18:41:02 INFO - LiveReload server is running on port 35729
+09-May-2026 18:41:02 INFO - Starting ProtocolHandler ["http-nio-8765"]
+09-May-2026 18:41:02 INFO - Tomcat started on port 8765 (http) with context path ''
+09-May-2026 18:41:02 INFO - Condition evaluation unchanged
+09-May-2026 18:46:01 INFO - Restarting due to 1 class path change (0 additions, 0 deletions, 1 modification)
+09-May-2026 18:46:01 INFO - Stopping ProtocolHandler ["http-nio-8765"]
+09-May-2026 18:46:01 INFO - Closing JPA EntityManagerFactory for persistence unit 'default'
+09-May-2026 18:46:01 INFO - HikariPool-2 - Shutdown initiated...
+09-May-2026 18:46:01 INFO - HikariPool-2 - Shutdown completed.
+09-May-2026 18:46:01 INFO - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+09-May-2026 18:46:01 INFO - Finished Spring Data repository scanning in 88 ms. Found 12 JPA repository interfaces.
+09-May-2026 18:46:01 INFO - Tomcat initialized with port 8765 (http)
+09-May-2026 18:46:01 INFO - Initializing ProtocolHandler ["http-nio-8765"]
+09-May-2026 18:46:01 INFO - Starting service [Tomcat]
+09-May-2026 18:46:01 INFO - Starting Servlet engine: [Apache Tomcat/10.1.19]
+09-May-2026 18:46:01 INFO - Initializing Spring embedded WebApplicationContext
+09-May-2026 18:46:01 INFO - Root WebApplicationContext: initialization completed in 436 ms
+09-May-2026 18:46:01 INFO - HikariPool-3 - Starting...
+09-May-2026 18:46:01 INFO - HikariPool-3 - Added connection com.mysql.cj.jdbc.ConnectionImpl@7b45eb94
+09-May-2026 18:46:01 INFO - HikariPool-3 - Start completed.
+09-May-2026 18:46:01 INFO - HHH000204: Processing PersistenceUnitInfo [name: default]
+09-May-2026 18:46:01 INFO - HHH000026: Second-level cache disabled
+09-May-2026 18:46:01 INFO - No LoadTimeWeaver setup: ignoring JPA class transformer
+09-May-2026 18:46:02 INFO - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+09-May-2026 18:46:02 INFO - Initialized JPA EntityManagerFactory for persistence unit 'default'
+09-May-2026 18:46:02 WARN - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+09-May-2026 18:46:02 INFO - LiveReload server is running on port 35729
+09-May-2026 18:46:02 INFO - Starting ProtocolHandler ["http-nio-8765"]
+09-May-2026 18:46:02 INFO - Tomcat started on port 8765 (http) with context path ''
+09-May-2026 18:46:02 INFO - Condition evaluation unchanged
+09-May-2026 18:46:07 INFO - Restarting due to 1 class path change (0 additions, 0 deletions, 1 modification)
+09-May-2026 18:46:07 INFO - Stopping ProtocolHandler ["http-nio-8765"]
+09-May-2026 18:46:07 INFO - Closing JPA EntityManagerFactory for persistence unit 'default'
+09-May-2026 18:46:07 INFO - HikariPool-3 - Shutdown initiated...
+09-May-2026 18:46:07 INFO - HikariPool-3 - Shutdown completed.
+09-May-2026 18:46:07 INFO - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+09-May-2026 18:46:07 INFO - Finished Spring Data repository scanning in 61 ms. Found 12 JPA repository interfaces.
+09-May-2026 18:46:07 INFO - Tomcat initialized with port 8765 (http)
+09-May-2026 18:46:07 INFO - Initializing ProtocolHandler ["http-nio-8765"]
+09-May-2026 18:46:07 INFO - Starting service [Tomcat]
+09-May-2026 18:46:07 INFO - Starting Servlet engine: [Apache Tomcat/10.1.19]
+09-May-2026 18:46:07 INFO - Initializing Spring embedded WebApplicationContext
+09-May-2026 18:46:07 INFO - Root WebApplicationContext: initialization completed in 354 ms
+09-May-2026 18:46:07 INFO - HikariPool-4 - Starting...
+09-May-2026 18:46:07 INFO - HikariPool-4 - Added connection com.mysql.cj.jdbc.ConnectionImpl@5bd40524
+09-May-2026 18:46:07 INFO - HikariPool-4 - Start completed.
+09-May-2026 18:46:07 INFO - HHH000204: Processing PersistenceUnitInfo [name: default]
+09-May-2026 18:46:07 INFO - HHH000026: Second-level cache disabled
+09-May-2026 18:46:07 INFO - No LoadTimeWeaver setup: ignoring JPA class transformer
+09-May-2026 18:46:08 INFO - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+09-May-2026 18:46:08 INFO - Initialized JPA EntityManagerFactory for persistence unit 'default'
+09-May-2026 18:46:08 WARN - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+09-May-2026 18:46:08 INFO - LiveReload server is running on port 35729
+09-May-2026 18:46:08 INFO - Starting ProtocolHandler ["http-nio-8765"]
+09-May-2026 18:46:08 INFO - Tomcat started on port 8765 (http) with context path ''
+09-May-2026 18:46:08 INFO - Condition evaluation unchanged
+09-May-2026 19:05:33 INFO - Restarting due to 1 class path change (0 additions, 0 deletions, 1 modification)
+09-May-2026 19:05:33 INFO - Stopping ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:05:33 INFO - Closing JPA EntityManagerFactory for persistence unit 'default'
+09-May-2026 19:05:33 INFO - HikariPool-4 - Shutdown initiated...
+09-May-2026 19:05:33 INFO - HikariPool-4 - Shutdown completed.
+09-May-2026 19:05:33 INFO - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+09-May-2026 19:05:34 INFO - Finished Spring Data repository scanning in 158 ms. Found 12 JPA repository interfaces.
+09-May-2026 19:05:34 INFO - Tomcat initialized with port 8765 (http)
+09-May-2026 19:05:34 INFO - Initializing ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:05:34 INFO - Starting service [Tomcat]
+09-May-2026 19:05:34 INFO - Starting Servlet engine: [Apache Tomcat/10.1.19]
+09-May-2026 19:05:34 INFO - Initializing Spring embedded WebApplicationContext
+09-May-2026 19:05:34 INFO - Root WebApplicationContext: initialization completed in 1400 ms
+09-May-2026 19:05:34 INFO - HikariPool-5 - Starting...
+09-May-2026 19:05:35 INFO - HikariPool-5 - Added connection com.mysql.cj.jdbc.ConnectionImpl@ef92d2e
+09-May-2026 19:05:35 INFO - HikariPool-5 - Start completed.
+09-May-2026 19:05:35 INFO - HHH000204: Processing PersistenceUnitInfo [name: default]
+09-May-2026 19:05:35 INFO - HHH000026: Second-level cache disabled
+09-May-2026 19:05:35 INFO - No LoadTimeWeaver setup: ignoring JPA class transformer
+09-May-2026 19:05:36 INFO - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+09-May-2026 19:05:36 INFO - Initialized JPA EntityManagerFactory for persistence unit 'default'
+09-May-2026 19:05:37 WARN - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+09-May-2026 19:05:38 INFO - LiveReload server is running on port 35729
+09-May-2026 19:05:38 INFO - Starting ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:05:38 INFO - Tomcat started on port 8765 (http) with context path ''
+09-May-2026 19:05:38 INFO - Condition evaluation unchanged
+09-May-2026 19:26:59 INFO - Restarting due to 1 class path change (1 addition, 0 deletions, 0 modifications)
+09-May-2026 19:26:59 INFO - Stopping ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:26:59 INFO - Closing JPA EntityManagerFactory for persistence unit 'default'
+09-May-2026 19:26:59 INFO - HikariPool-5 - Shutdown initiated...
+09-May-2026 19:26:59 INFO - HikariPool-5 - Shutdown completed.
+09-May-2026 19:27:00 INFO - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+09-May-2026 19:27:00 INFO - Finished Spring Data repository scanning in 19 ms. Found 12 JPA repository interfaces.
+09-May-2026 19:27:00 INFO - Tomcat initialized with port 8765 (http)
+09-May-2026 19:27:00 INFO - Initializing ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:27:00 INFO - Starting service [Tomcat]
+09-May-2026 19:27:00 INFO - Starting Servlet engine: [Apache Tomcat/10.1.19]
+09-May-2026 19:27:00 INFO - Initializing Spring embedded WebApplicationContext
+09-May-2026 19:27:00 INFO - Root WebApplicationContext: initialization completed in 201 ms
+09-May-2026 19:27:00 INFO - HikariPool-6 - Starting...
+09-May-2026 19:27:00 INFO - HikariPool-6 - Added connection com.mysql.cj.jdbc.ConnectionImpl@58e28676
+09-May-2026 19:27:00 INFO - HikariPool-6 - Start completed.
+09-May-2026 19:27:00 INFO - HHH000204: Processing PersistenceUnitInfo [name: default]
+09-May-2026 19:27:00 INFO - HHH000026: Second-level cache disabled
+09-May-2026 19:27:00 INFO - No LoadTimeWeaver setup: ignoring JPA class transformer
+09-May-2026 19:27:00 INFO - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+09-May-2026 19:27:00 INFO - Initialized JPA EntityManagerFactory for persistence unit 'default'
+09-May-2026 19:27:00 WARN - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+09-May-2026 19:27:01 INFO - LiveReload server is running on port 35729
+09-May-2026 19:27:01 INFO - Starting ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:27:01 INFO - Tomcat started on port 8765 (http) with context path ''
+09-May-2026 19:27:01 INFO - Condition evaluation unchanged
+09-May-2026 19:27:42 INFO - Restarting due to 1 class path change (0 additions, 0 deletions, 1 modification)
+09-May-2026 19:27:42 INFO - Stopping ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:27:42 INFO - Closing JPA EntityManagerFactory for persistence unit 'default'
+09-May-2026 19:27:42 INFO - HikariPool-6 - Shutdown initiated...
+09-May-2026 19:27:42 INFO - HikariPool-6 - Shutdown completed.
+09-May-2026 19:27:42 INFO - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+09-May-2026 19:27:42 INFO - Finished Spring Data repository scanning in 20 ms. Found 12 JPA repository interfaces.
+09-May-2026 19:27:42 INFO - Tomcat initialized with port 8765 (http)
+09-May-2026 19:27:42 INFO - Initializing ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:27:42 INFO - Starting service [Tomcat]
+09-May-2026 19:27:42 INFO - Starting Servlet engine: [Apache Tomcat/10.1.19]
+09-May-2026 19:27:42 INFO - Initializing Spring embedded WebApplicationContext
+09-May-2026 19:27:42 INFO - Root WebApplicationContext: initialization completed in 188 ms
+09-May-2026 19:27:42 INFO - HikariPool-7 - Starting...
+09-May-2026 19:27:42 INFO - HikariPool-7 - Added connection com.mysql.cj.jdbc.ConnectionImpl@6b51f46a
+09-May-2026 19:27:42 INFO - HikariPool-7 - Start completed.
+09-May-2026 19:27:42 INFO - HHH000204: Processing PersistenceUnitInfo [name: default]
+09-May-2026 19:27:42 INFO - HHH000026: Second-level cache disabled
+09-May-2026 19:27:42 INFO - No LoadTimeWeaver setup: ignoring JPA class transformer
+09-May-2026 19:27:42 INFO - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+09-May-2026 19:27:42 INFO - Initialized JPA EntityManagerFactory for persistence unit 'default'
+09-May-2026 19:27:43 WARN - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+09-May-2026 19:27:43 INFO - LiveReload server is running on port 35729
+09-May-2026 19:27:43 INFO - Starting ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:27:43 INFO - Tomcat started on port 8765 (http) with context path ''
+09-May-2026 19:27:43 INFO - Condition evaluation unchanged
+09-May-2026 19:28:09 INFO - Restarting due to 1 class path change (1 addition, 0 deletions, 0 modifications)
+09-May-2026 19:28:09 INFO - Stopping ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:28:09 INFO - Closing JPA EntityManagerFactory for persistence unit 'default'
+09-May-2026 19:28:09 INFO - HikariPool-7 - Shutdown initiated...
+09-May-2026 19:28:09 INFO - HikariPool-7 - Shutdown completed.
+09-May-2026 19:28:10 INFO - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+09-May-2026 19:28:10 INFO - Finished Spring Data repository scanning in 146 ms. Found 12 JPA repository interfaces.
+09-May-2026 19:28:10 INFO - Tomcat initialized with port 8765 (http)
+09-May-2026 19:28:10 INFO - Initializing ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:28:10 INFO - Starting service [Tomcat]
+09-May-2026 19:28:10 INFO - Starting Servlet engine: [Apache Tomcat/10.1.19]
+09-May-2026 19:28:10 INFO - Initializing Spring embedded WebApplicationContext
+09-May-2026 19:28:10 INFO - Root WebApplicationContext: initialization completed in 728 ms
+09-May-2026 19:28:10 INFO - HikariPool-8 - Starting...
+09-May-2026 19:28:10 INFO - HikariPool-8 - Added connection com.mysql.cj.jdbc.ConnectionImpl@536098ff
+09-May-2026 19:28:10 INFO - HikariPool-8 - Start completed.
+09-May-2026 19:28:10 INFO - HHH000204: Processing PersistenceUnitInfo [name: default]
+09-May-2026 19:28:10 INFO - HHH000026: Second-level cache disabled
+09-May-2026 19:28:10 INFO - No LoadTimeWeaver setup: ignoring JPA class transformer
+09-May-2026 19:28:11 INFO - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+09-May-2026 19:28:11 INFO - Initialized JPA EntityManagerFactory for persistence unit 'default'
+09-May-2026 19:28:12 WARN - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+09-May-2026 19:28:12 INFO - LiveReload server is running on port 35729
+09-May-2026 19:28:12 INFO - Starting ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:28:12 INFO - Tomcat started on port 8765 (http) with context path ''
+09-May-2026 19:28:12 INFO - Condition evaluation unchanged
+09-May-2026 19:28:30 INFO - Restarting due to 1 class path change (0 additions, 0 deletions, 1 modification)
+09-May-2026 19:28:30 INFO - Stopping ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:28:30 INFO - Closing JPA EntityManagerFactory for persistence unit 'default'
+09-May-2026 19:28:30 INFO - HikariPool-8 - Shutdown initiated...
+09-May-2026 19:28:30 INFO - HikariPool-8 - Shutdown completed.
+09-May-2026 19:28:30 INFO - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+09-May-2026 19:28:30 INFO - Finished Spring Data repository scanning in 15 ms. Found 12 JPA repository interfaces.
+09-May-2026 19:28:30 INFO - Tomcat initialized with port 8765 (http)
+09-May-2026 19:28:30 INFO - Initializing ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:28:30 INFO - Starting service [Tomcat]
+09-May-2026 19:28:30 INFO - Starting Servlet engine: [Apache Tomcat/10.1.19]
+09-May-2026 19:28:30 INFO - Initializing Spring embedded WebApplicationContext
+09-May-2026 19:28:30 INFO - Root WebApplicationContext: initialization completed in 171 ms
+09-May-2026 19:28:30 INFO - HikariPool-9 - Starting...
+09-May-2026 19:28:30 INFO - HikariPool-9 - Added connection com.mysql.cj.jdbc.ConnectionImpl@5f970319
+09-May-2026 19:28:30 INFO - HikariPool-9 - Start completed.
+09-May-2026 19:28:30 INFO - HHH000204: Processing PersistenceUnitInfo [name: default]
+09-May-2026 19:28:30 INFO - HHH000026: Second-level cache disabled
+09-May-2026 19:28:30 INFO - No LoadTimeWeaver setup: ignoring JPA class transformer
+09-May-2026 19:28:31 INFO - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+09-May-2026 19:28:31 INFO - Initialized JPA EntityManagerFactory for persistence unit 'default'
+09-May-2026 19:28:31 WARN - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+09-May-2026 19:28:31 INFO - LiveReload server is running on port 35729
+09-May-2026 19:28:31 INFO - Starting ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:28:31 INFO - Tomcat started on port 8765 (http) with context path ''
+09-May-2026 19:28:31 INFO - Condition evaluation unchanged
+09-May-2026 19:28:58 INFO - Restarting due to 1 class path change (1 addition, 0 deletions, 0 modifications)
+09-May-2026 19:28:58 INFO - Stopping ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:28:58 INFO - Closing JPA EntityManagerFactory for persistence unit 'default'
+09-May-2026 19:28:58 INFO - HikariPool-9 - Shutdown initiated...
+09-May-2026 19:28:58 INFO - HikariPool-9 - Shutdown completed.
+09-May-2026 19:28:58 INFO - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+09-May-2026 19:28:58 INFO - Finished Spring Data repository scanning in 133 ms. Found 12 JPA repository interfaces.
+09-May-2026 19:28:58 INFO - Tomcat initialized with port 8765 (http)
+09-May-2026 19:28:58 INFO - Initializing ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:28:58 INFO - Starting service [Tomcat]
+09-May-2026 19:28:58 INFO - Starting Servlet engine: [Apache Tomcat/10.1.19]
+09-May-2026 19:28:58 INFO - Initializing Spring embedded WebApplicationContext
+09-May-2026 19:28:58 INFO - Root WebApplicationContext: initialization completed in 604 ms
+09-May-2026 19:28:58 INFO - HikariPool-10 - Starting...
+09-May-2026 19:28:58 INFO - HikariPool-10 - Added connection com.mysql.cj.jdbc.ConnectionImpl@70c7e7b2
+09-May-2026 19:28:58 INFO - HikariPool-10 - Start completed.
+09-May-2026 19:28:58 INFO - HHH000204: Processing PersistenceUnitInfo [name: default]
+09-May-2026 19:28:58 INFO - HHH000026: Second-level cache disabled
+09-May-2026 19:28:58 INFO - No LoadTimeWeaver setup: ignoring JPA class transformer
+09-May-2026 19:28:59 INFO - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+09-May-2026 19:28:59 INFO - Initialized JPA EntityManagerFactory for persistence unit 'default'
+09-May-2026 19:28:59 WARN - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+09-May-2026 19:29:00 INFO - LiveReload server is running on port 35729
+09-May-2026 19:29:00 INFO - Starting ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:29:00 INFO - Tomcat started on port 8765 (http) with context path ''
+09-May-2026 19:29:00 INFO - Condition evaluation unchanged
+09-May-2026 19:29:09 INFO - Restarting due to 1 class path change (0 additions, 0 deletions, 1 modification)
+09-May-2026 19:29:09 INFO - Stopping ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:29:09 INFO - Closing JPA EntityManagerFactory for persistence unit 'default'
+09-May-2026 19:29:09 INFO - HikariPool-10 - Shutdown initiated...
+09-May-2026 19:29:09 INFO - HikariPool-10 - Shutdown completed.
+09-May-2026 19:29:09 INFO - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+09-May-2026 19:29:09 INFO - Finished Spring Data repository scanning in 18 ms. Found 12 JPA repository interfaces.
+09-May-2026 19:29:09 INFO - Tomcat initialized with port 8765 (http)
+09-May-2026 19:29:09 INFO - Initializing ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:29:09 INFO - Starting service [Tomcat]
+09-May-2026 19:29:09 INFO - Starting Servlet engine: [Apache Tomcat/10.1.19]
+09-May-2026 19:29:09 INFO - Initializing Spring embedded WebApplicationContext
+09-May-2026 19:29:09 INFO - Root WebApplicationContext: initialization completed in 189 ms
+09-May-2026 19:29:09 INFO - HikariPool-11 - Starting...
+09-May-2026 19:29:09 INFO - HikariPool-11 - Added connection com.mysql.cj.jdbc.ConnectionImpl@34f48ad9
+09-May-2026 19:29:09 INFO - HikariPool-11 - Start completed.
+09-May-2026 19:29:09 INFO - HHH000204: Processing PersistenceUnitInfo [name: default]
+09-May-2026 19:29:09 INFO - HHH000026: Second-level cache disabled
+09-May-2026 19:29:09 INFO - No LoadTimeWeaver setup: ignoring JPA class transformer
+09-May-2026 19:29:09 INFO - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+09-May-2026 19:29:09 INFO - Initialized JPA EntityManagerFactory for persistence unit 'default'
+09-May-2026 19:29:09 WARN - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+09-May-2026 19:29:09 INFO - LiveReload server is running on port 35729
+09-May-2026 19:29:09 INFO - Starting ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:29:09 INFO - Tomcat started on port 8765 (http) with context path ''
+09-May-2026 19:29:10 INFO - Condition evaluation unchanged
+09-May-2026 19:31:54 INFO - Restarting due to 2 class path changes (0 additions, 0 deletions, 2 modifications)
+09-May-2026 19:31:54 INFO - Stopping ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:31:54 INFO - Closing JPA EntityManagerFactory for persistence unit 'default'
+09-May-2026 19:31:54 INFO - HikariPool-11 - Shutdown initiated...
+09-May-2026 19:31:54 INFO - HikariPool-11 - Shutdown completed.
+09-May-2026 19:31:54 INFO - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+09-May-2026 19:31:54 INFO - Finished Spring Data repository scanning in 15 ms. Found 12 JPA repository interfaces.
+09-May-2026 19:31:54 INFO - Tomcat initialized with port 8765 (http)
+09-May-2026 19:31:54 INFO - Initializing ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:31:54 INFO - Starting service [Tomcat]
+09-May-2026 19:31:54 INFO - Starting Servlet engine: [Apache Tomcat/10.1.19]
+09-May-2026 19:31:54 INFO - Initializing Spring embedded WebApplicationContext
+09-May-2026 19:31:54 INFO - Root WebApplicationContext: initialization completed in 183 ms
+09-May-2026 19:31:54 INFO - HikariPool-12 - Starting...
+09-May-2026 19:31:54 INFO - HikariPool-12 - Added connection com.mysql.cj.jdbc.ConnectionImpl@63fa5cf9
+09-May-2026 19:31:54 INFO - HikariPool-12 - Start completed.
+09-May-2026 19:31:54 INFO - HHH000204: Processing PersistenceUnitInfo [name: default]
+09-May-2026 19:31:54 INFO - HHH000026: Second-level cache disabled
+09-May-2026 19:31:54 INFO - No LoadTimeWeaver setup: ignoring JPA class transformer
+09-May-2026 19:31:54 INFO - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+09-May-2026 19:31:54 INFO - Initialized JPA EntityManagerFactory for persistence unit 'default'
+09-May-2026 19:31:55 WARN - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+09-May-2026 19:31:55 INFO - LiveReload server is running on port 35729
+09-May-2026 19:31:55 INFO - Starting ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:31:55 INFO - Tomcat started on port 8765 (http) with context path ''
+09-May-2026 19:31:55 INFO - Condition evaluation unchanged
+09-May-2026 19:34:29 INFO - Restarting due to 1 class path change (0 additions, 0 deletions, 1 modification)
+09-May-2026 19:34:29 INFO - Stopping ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:34:29 INFO - Closing JPA EntityManagerFactory for persistence unit 'default'
+09-May-2026 19:34:29 INFO - HikariPool-12 - Shutdown initiated...
+09-May-2026 19:34:29 INFO - HikariPool-12 - Shutdown completed.
+09-May-2026 19:34:29 INFO - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+09-May-2026 19:34:29 INFO - Finished Spring Data repository scanning in 17 ms. Found 12 JPA repository interfaces.
+09-May-2026 19:34:29 INFO - Tomcat initialized with port 8765 (http)
+09-May-2026 19:34:29 INFO - Initializing ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:34:29 INFO - Starting service [Tomcat]
+09-May-2026 19:34:29 INFO - Starting Servlet engine: [Apache Tomcat/10.1.19]
+09-May-2026 19:34:29 INFO - Initializing Spring embedded WebApplicationContext
+09-May-2026 19:34:29 INFO - Root WebApplicationContext: initialization completed in 171 ms
+09-May-2026 19:34:29 INFO - HikariPool-13 - Starting...
+09-May-2026 19:34:29 INFO - HikariPool-13 - Added connection com.mysql.cj.jdbc.ConnectionImpl@51554e7f
+09-May-2026 19:34:29 INFO - HikariPool-13 - Start completed.
+09-May-2026 19:34:29 INFO - HHH000204: Processing PersistenceUnitInfo [name: default]
+09-May-2026 19:34:29 INFO - HHH000026: Second-level cache disabled
+09-May-2026 19:34:29 INFO - No LoadTimeWeaver setup: ignoring JPA class transformer
+09-May-2026 19:34:29 INFO - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+09-May-2026 19:34:29 INFO - Initialized JPA EntityManagerFactory for persistence unit 'default'
+09-May-2026 19:34:29 WARN - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+09-May-2026 19:34:29 INFO - LiveReload server is running on port 35729
+09-May-2026 19:34:29 INFO - Starting ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:34:29 INFO - Tomcat started on port 8765 (http) with context path ''
+09-May-2026 19:34:29 INFO - Condition evaluation unchanged
+09-May-2026 19:35:17 INFO - Restarting due to 1 class path change (1 addition, 0 deletions, 0 modifications)
+09-May-2026 19:35:17 INFO - Stopping ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:35:17 INFO - Closing JPA EntityManagerFactory for persistence unit 'default'
+09-May-2026 19:35:17 INFO - HikariPool-13 - Shutdown initiated...
+09-May-2026 19:35:17 INFO - HikariPool-13 - Shutdown completed.
+09-May-2026 19:35:17 INFO - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+09-May-2026 19:35:17 INFO - Finished Spring Data repository scanning in 44 ms. Found 12 JPA repository interfaces.
+09-May-2026 19:35:17 INFO - Tomcat initialized with port 8765 (http)
+09-May-2026 19:35:17 INFO - Initializing ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:35:17 INFO - Starting service [Tomcat]
+09-May-2026 19:35:17 INFO - Starting Servlet engine: [Apache Tomcat/10.1.19]
+09-May-2026 19:35:17 INFO - Initializing Spring embedded WebApplicationContext
+09-May-2026 19:35:17 INFO - Root WebApplicationContext: initialization completed in 441 ms
+09-May-2026 19:35:17 INFO - HikariPool-14 - Starting...
+09-May-2026 19:35:17 INFO - HikariPool-14 - Added connection com.mysql.cj.jdbc.ConnectionImpl@5990d1e8
+09-May-2026 19:35:17 INFO - HikariPool-14 - Start completed.
+09-May-2026 19:35:17 INFO - HHH000204: Processing PersistenceUnitInfo [name: default]
+09-May-2026 19:35:17 INFO - HHH000026: Second-level cache disabled
+09-May-2026 19:35:17 INFO - No LoadTimeWeaver setup: ignoring JPA class transformer
+09-May-2026 19:35:18 INFO - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+09-May-2026 19:35:18 INFO - Initialized JPA EntityManagerFactory for persistence unit 'default'
+09-May-2026 19:35:18 WARN - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+09-May-2026 19:35:18 INFO - LiveReload server is running on port 35729
+09-May-2026 19:35:18 INFO - Starting ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:35:18 INFO - Tomcat started on port 8765 (http) with context path ''
+09-May-2026 19:35:18 INFO - Condition evaluation unchanged
+09-May-2026 19:35:27 INFO - Restarting due to 1 class path change (0 additions, 0 deletions, 1 modification)
+09-May-2026 19:35:27 INFO - Stopping ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:35:27 INFO - Closing JPA EntityManagerFactory for persistence unit 'default'
+09-May-2026 19:35:27 INFO - HikariPool-14 - Shutdown initiated...
+09-May-2026 19:35:27 INFO - HikariPool-14 - Shutdown completed.
+09-May-2026 19:35:27 INFO - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+09-May-2026 19:35:27 INFO - Finished Spring Data repository scanning in 15 ms. Found 12 JPA repository interfaces.
+09-May-2026 19:35:27 INFO - Tomcat initialized with port 8765 (http)
+09-May-2026 19:35:27 INFO - Initializing ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:35:27 INFO - Starting service [Tomcat]
+09-May-2026 19:35:27 INFO - Starting Servlet engine: [Apache Tomcat/10.1.19]
+09-May-2026 19:35:27 INFO - Initializing Spring embedded WebApplicationContext
+09-May-2026 19:35:27 INFO - Root WebApplicationContext: initialization completed in 169 ms
+09-May-2026 19:35:27 INFO - HikariPool-15 - Starting...
+09-May-2026 19:35:27 INFO - HikariPool-15 - Added connection com.mysql.cj.jdbc.ConnectionImpl@11fff065
+09-May-2026 19:35:27 INFO - HikariPool-15 - Start completed.
+09-May-2026 19:35:27 INFO - HHH000204: Processing PersistenceUnitInfo [name: default]
+09-May-2026 19:35:27 INFO - HHH000026: Second-level cache disabled
+09-May-2026 19:35:27 INFO - No LoadTimeWeaver setup: ignoring JPA class transformer
+09-May-2026 19:35:27 INFO - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+09-May-2026 19:35:27 INFO - Initialized JPA EntityManagerFactory for persistence unit 'default'
+09-May-2026 19:35:28 WARN - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+09-May-2026 19:35:28 INFO - LiveReload server is running on port 35729
+09-May-2026 19:35:28 INFO - Starting ProtocolHandler ["http-nio-8765"]
+09-May-2026 19:35:28 INFO - Tomcat started on port 8765 (http) with context path ''
+09-May-2026 19:35:28 INFO - Condition evaluation unchanged
+10-May-2026 15:44:47 INFO - HV000001: Hibernate Validator 8.0.1.Final
+10-May-2026 15:44:48 INFO - Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+10-May-2026 15:44:48 INFO - For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+10-May-2026 15:44:53 INFO - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+10-May-2026 15:44:53 INFO - Finished Spring Data repository scanning in 263 ms. Found 12 JPA repository interfaces.
+10-May-2026 15:44:57 INFO - Tomcat initialized with port 8765 (http)
+10-May-2026 15:44:57 INFO - Initializing ProtocolHandler ["http-nio-8765"]
+10-May-2026 15:44:57 INFO - Starting service [Tomcat]
+10-May-2026 15:44:57 INFO - Starting Servlet engine: [Apache Tomcat/10.1.19]
+10-May-2026 15:44:57 INFO - Initializing Spring embedded WebApplicationContext
+10-May-2026 15:44:57 INFO - Root WebApplicationContext: initialization completed in 9215 ms
+10-May-2026 15:44:59 INFO - HikariPool-1 - Starting...
+10-May-2026 15:45:00 INFO - HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@7cb79b35
+10-May-2026 15:45:00 INFO - HikariPool-1 - Start completed.
+10-May-2026 15:45:00 INFO - HHH000204: Processing PersistenceUnitInfo [name: default]
+10-May-2026 15:45:00 INFO - HHH000412: Hibernate ORM core version 6.4.4.Final
+10-May-2026 15:45:01 INFO - HHH000026: Second-level cache disabled
+10-May-2026 15:45:01 INFO - No LoadTimeWeaver setup: ignoring JPA class transformer
+10-May-2026 15:45:04 INFO - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+10-May-2026 15:45:04 INFO - Initialized JPA EntityManagerFactory for persistence unit 'default'
+10-May-2026 15:45:07 INFO - Hibernate is in classpath; If applicable, HQL parser will be used.
+10-May-2026 15:45:11 WARN - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+10-May-2026 15:45:12 INFO - LiveReload server is running on port 35729
+10-May-2026 15:45:12 INFO - Starting ProtocolHandler ["http-nio-8765"]
+10-May-2026 15:45:12 INFO - Tomcat started on port 8765 (http) with context path ''
+10-May-2026 15:48:01 INFO - Initializing Spring DispatcherServlet 'dispatcherServlet'
+10-May-2026 15:48:01 INFO - Initializing Servlet 'dispatcherServlet'
+10-May-2026 15:48:01 INFO - Completed initialization in 24 ms
+10-May-2026 15:49:55 ERROR - Request method 'GET' is not supported
+org.springframework.web.HttpRequestMethodNotSupportedException: Request method 'GET' is not supported
+	at org.springframework.web.servlet.mvc.method.RequestMappingInfoHandlerMapping.handleNoMatch(RequestMappingInfoHandlerMapping.java:265) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.handler.AbstractHandlerMethodMapping.lookupHandlerMethod(AbstractHandlerMethodMapping.java:441) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.handler.AbstractHandlerMethodMapping.getHandlerInternal(AbstractHandlerMethodMapping.java:382) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.mvc.method.RequestMappingInfoHandlerMapping.getHandlerInternal(RequestMappingInfoHandlerMapping.java:126) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.mvc.method.RequestMappingInfoHandlerMapping.getHandlerInternal(RequestMappingInfoHandlerMapping.java:68) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.handler.AbstractHandlerMapping.getHandler(AbstractHandlerMapping.java:507) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.DispatcherServlet.getHandler(DispatcherServlet.java:1283) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1065) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.FrameworkServlet.doGet(FrameworkServlet.java:903) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:564) ~[tomcat-embed-core-10.1.19.jar:6.0]
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658) ~[tomcat-embed-core-10.1.19.jar:6.0]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:205) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51) ~[tomcat-embed-websocket-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100) ~[spring-web-6.1.5.jar:6.1.5]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.5.jar:6.1.5]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93) ~[spring-web-6.1.5.jar:6.1.5]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.5.jar:6.1.5]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201) ~[spring-web-6.1.5.jar:6.1.5]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.5.jar:6.1.5]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:482) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:115) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:391) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:896) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1744) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1191) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at java.lang.Thread.run(Thread.java:1583) [?:?]
+10-May-2026 15:49:55 WARN - Resolved [org.springframework.web.HttpRequestMethodNotSupportedException: Request method 'GET' is not supported]
+10-May-2026 15:49:55 ERROR - Request method 'GET' is not supported
+org.springframework.web.HttpRequestMethodNotSupportedException: Request method 'GET' is not supported
+	at org.springframework.web.servlet.mvc.method.RequestMappingInfoHandlerMapping.handleNoMatch(RequestMappingInfoHandlerMapping.java:265) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.handler.AbstractHandlerMethodMapping.lookupHandlerMethod(AbstractHandlerMethodMapping.java:441) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.handler.AbstractHandlerMethodMapping.getHandlerInternal(AbstractHandlerMethodMapping.java:382) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.mvc.method.RequestMappingInfoHandlerMapping.getHandlerInternal(RequestMappingInfoHandlerMapping.java:126) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.mvc.method.RequestMappingInfoHandlerMapping.getHandlerInternal(RequestMappingInfoHandlerMapping.java:68) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.handler.AbstractHandlerMapping.getHandler(AbstractHandlerMapping.java:507) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.DispatcherServlet.getHandler(DispatcherServlet.java:1283) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1065) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.FrameworkServlet.doGet(FrameworkServlet.java:903) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:564) ~[tomcat-embed-core-10.1.19.jar:6.0]
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658) ~[tomcat-embed-core-10.1.19.jar:6.0]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:205) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51) ~[tomcat-embed-websocket-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100) ~[spring-web-6.1.5.jar:6.1.5]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.5.jar:6.1.5]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93) ~[spring-web-6.1.5.jar:6.1.5]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.5.jar:6.1.5]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201) ~[spring-web-6.1.5.jar:6.1.5]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.5.jar:6.1.5]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:482) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:115) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:391) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:896) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1744) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1191) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at java.lang.Thread.run(Thread.java:1583) [?:?]
+10-May-2026 15:49:55 WARN - Resolved [org.springframework.web.HttpRequestMethodNotSupportedException: Request method 'GET' is not supported]
+10-May-2026 15:50:49 ERROR - Request method 'GET' is not supported
+org.springframework.web.HttpRequestMethodNotSupportedException: Request method 'GET' is not supported
+	at org.springframework.web.servlet.mvc.method.RequestMappingInfoHandlerMapping.handleNoMatch(RequestMappingInfoHandlerMapping.java:265) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.handler.AbstractHandlerMethodMapping.lookupHandlerMethod(AbstractHandlerMethodMapping.java:441) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.handler.AbstractHandlerMethodMapping.getHandlerInternal(AbstractHandlerMethodMapping.java:382) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.mvc.method.RequestMappingInfoHandlerMapping.getHandlerInternal(RequestMappingInfoHandlerMapping.java:126) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.mvc.method.RequestMappingInfoHandlerMapping.getHandlerInternal(RequestMappingInfoHandlerMapping.java:68) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.handler.AbstractHandlerMapping.getHandler(AbstractHandlerMapping.java:507) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.DispatcherServlet.getHandler(DispatcherServlet.java:1283) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1065) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.FrameworkServlet.doGet(FrameworkServlet.java:903) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:564) ~[tomcat-embed-core-10.1.19.jar:6.0]
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658) ~[tomcat-embed-core-10.1.19.jar:6.0]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:205) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51) ~[tomcat-embed-websocket-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100) ~[spring-web-6.1.5.jar:6.1.5]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.5.jar:6.1.5]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93) ~[spring-web-6.1.5.jar:6.1.5]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.5.jar:6.1.5]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201) ~[spring-web-6.1.5.jar:6.1.5]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.5.jar:6.1.5]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:482) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:115) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:391) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:896) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1744) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1191) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at java.lang.Thread.run(Thread.java:1583) [?:?]
+10-May-2026 15:50:49 WARN - Resolved [org.springframework.web.HttpRequestMethodNotSupportedException: Request method 'GET' is not supported]
+10-May-2026 15:50:49 ERROR - Request method 'GET' is not supported
+org.springframework.web.HttpRequestMethodNotSupportedException: Request method 'GET' is not supported
+	at org.springframework.web.servlet.mvc.method.RequestMappingInfoHandlerMapping.handleNoMatch(RequestMappingInfoHandlerMapping.java:265) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.handler.AbstractHandlerMethodMapping.lookupHandlerMethod(AbstractHandlerMethodMapping.java:441) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.handler.AbstractHandlerMethodMapping.getHandlerInternal(AbstractHandlerMethodMapping.java:382) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.mvc.method.RequestMappingInfoHandlerMapping.getHandlerInternal(RequestMappingInfoHandlerMapping.java:126) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.mvc.method.RequestMappingInfoHandlerMapping.getHandlerInternal(RequestMappingInfoHandlerMapping.java:68) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.handler.AbstractHandlerMapping.getHandler(AbstractHandlerMapping.java:507) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.DispatcherServlet.getHandler(DispatcherServlet.java:1283) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1065) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at org.springframework.web.servlet.FrameworkServlet.doGet(FrameworkServlet.java:903) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:564) ~[tomcat-embed-core-10.1.19.jar:6.0]
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885) ~[spring-webmvc-6.1.5.jar:6.1.5]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658) ~[tomcat-embed-core-10.1.19.jar:6.0]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:205) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51) ~[tomcat-embed-websocket-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100) ~[spring-web-6.1.5.jar:6.1.5]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.5.jar:6.1.5]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93) ~[spring-web-6.1.5.jar:6.1.5]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.5.jar:6.1.5]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201) ~[spring-web-6.1.5.jar:6.1.5]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.5.jar:6.1.5]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:174) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:149) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:482) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:115) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:391) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:896) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1744) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1191) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
+	at java.lang.Thread.run(Thread.java:1583) [?:?]
+10-May-2026 15:50:49 WARN - Resolved [org.springframework.web.HttpRequestMethodNotSupportedException: Request method 'GET' is not supported]

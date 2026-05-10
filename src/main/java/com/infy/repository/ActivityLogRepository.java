@@ -19,6 +19,9 @@ public interface ActivityLogRepository extends CrudRepository<ActivityLog, Integ
     List<ActivityLog> findByUser_UserIdAndActivityDateBetweenOrderByActivityDateDesc(
             Integer userId, LocalDate fromDate, LocalDate toDate);
 
+    // US 06 - Top 5 most recent activity logs for dashboard recent activity strip
+    List<ActivityLog> findTop5ByUser_UserIdOrderByActivityDateDescCreatedAtDesc(Integer userId);
+
     @Query("SELECT a.activityType, SUM(a.activityValue), a.unit " +
            "FROM ActivityLog a " +
            "WHERE a.user.userId = :userId " +
@@ -80,22 +83,17 @@ public interface ActivityLogRepository extends CrudRepository<ActivityLog, Integ
             @Param("toDate") LocalDate toDate);
 
     // US 01 - ownership check for edit and delete
-    // Returns the log only if it belongs to the given user — enforces ownership at DB level
     Optional<ActivityLog> findByActivityLogIdAndUser_UserId(
             Integer activityLogId, Integer userId);
-    
-    // US 05 
-    // All-time SUM for ALL activity types in one query — replaces 5 individual calls
-    // Returns rows of [ActivityType, Double].
-    // Only types the user has actually logged appear — missing types default to 0.0 in service.
+
+    // US 05
     @Query("SELECT a.activityType, COALESCE(SUM(a.activityValue), 0.0) " +
            "FROM ActivityLog a " +
            "WHERE a.user.userId = :userId " +
            "GROUP BY a.activityType")
     List<Object[]> getAllTimeTotalsByUser(@Param("userId") Integer userId);
-    
+
     // Best single-day total for a given type — used by DAILY_* badges
-    // Native query because JPQL does not support derived tables in FROM
     @Query(value =
            "SELECT COALESCE(MAX(daily.dayTotal), 0.0) FROM " +
            "(SELECT SUM(activity_value) AS dayTotal " +
@@ -105,10 +103,9 @@ public interface ActivityLogRepository extends CrudRepository<ActivityLog, Integ
            nativeQuery = true)
     Double getDailyBestByType(
             @Param("userId") Integer userId,
-            @Param("type") String type);   // String — nativeQuery can't bind enum directly
-    
+            @Param("type") String type);
+
     // Best single-week total for a given type — used by WEEKLY_* badges
-    // WEEK() groups by calendar week; outer query picks the max weekly total
     @Query(value =
            "SELECT COALESCE(MAX(weekly.weekTotal), 0.0) FROM " +
            "(SELECT SUM(activity_value) AS weekTotal " +
@@ -118,21 +115,58 @@ public interface ActivityLogRepository extends CrudRepository<ActivityLog, Integ
            nativeQuery = true)
     Double getWeeklyBestByType(
             @Param("userId") Integer userId,
-            @Param("type") String type);   // String — nativeQuery can't bind enum directly
-    
+            @Param("type") String type);
+
     // Recent distinct active dates — used for streak calculation.
-    // Pageable limits rows to avoid loading full history for long-term users.
-    // 400 rows covers a year-plus streak — more than any realistic streak length.
     @Query("SELECT DISTINCT a.activityDate FROM ActivityLog a " +
            "WHERE a.user.userId = :userId ORDER BY a.activityDate DESC")
     List<LocalDate> getActiveDates(@Param("userId") Integer userId, Pageable pageable);
- 
+
     // Total number of activity log entries ever — used by TOTAL_LOGS badge
     Integer countByUser_UserId(Integer userId);
- 
+
     // Count of distinct activity types ever logged — used by ACTIVITY_VARIETY badge
     @Query("SELECT COUNT(DISTINCT a.activityType) FROM ActivityLog a " +
            "WHERE a.user.userId = :userId")
     Integer countDistinctActivityTypes(@Param("userId") Integer userId);
+    
+    // US 09 - Filtered activity history sorted by activityDate DESC.
+    // All filter params are optional — null means the condition is skipped.
+    // Used by the /search endpoint and the /export endpoint.
+    @Query("SELECT a FROM ActivityLog a " +
+           "WHERE a.user.userId = :userId " +
+           "AND (:fromDate IS NULL OR a.activityDate >= :fromDate) " +
+           "AND (:toDate IS NULL OR a.activityDate <= :toDate) " +
+           "AND (:activityType IS NULL OR a.activityType = :activityType) " +
+           "AND (:minValue IS NULL OR a.activityValue >= :minValue) " +
+           "AND (:maxValue IS NULL OR a.activityValue <= :maxValue) " +
+           "ORDER BY a.activityDate DESC, a.createdAt DESC")
+    List<ActivityLog> findFilteredSortByDate(
+            @Param("userId") Integer userId,
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate,
+            @Param("activityType") ActivityType activityType,
+            @Param("minValue") Double minValue,
+            @Param("maxValue") Double maxValue);
+ 
+    // US 09 - Filtered activity history sorted by activityValue DESC.
+    // Identical filters to findFilteredSortByDate — only ORDER BY differs.
+    // Sorting by activityValue across mixed types compares different units
+    // (steps vs litres vs hours) — the user is expected to filter by type first.
+    @Query("SELECT a FROM ActivityLog a " +
+           "WHERE a.user.userId = :userId " +
+           "AND (:fromDate IS NULL OR a.activityDate >= :fromDate) " +
+           "AND (:toDate IS NULL OR a.activityDate <= :toDate) " +
+           "AND (:activityType IS NULL OR a.activityType = :activityType) " +
+           "AND (:minValue IS NULL OR a.activityValue >= :minValue) " +
+           "AND (:maxValue IS NULL OR a.activityValue <= :maxValue) " +
+           "ORDER BY a.activityValue DESC, a.activityDate DESC")
+    List<ActivityLog> findFilteredSortByAmount(
+            @Param("userId") Integer userId,
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate,
+            @Param("activityType") ActivityType activityType,
+            @Param("minValue") Double minValue,
+            @Param("maxValue") Double maxValue);
     
 }

@@ -6,7 +6,10 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -105,5 +108,58 @@ public class ActivityLogAPI {
         List<ActivityTrendPointDTO> trend = activityService.getActivityTrend(
                 userId, fromDate, toDate, metricType);
         return new ResponseEntity<>(trend, HttpStatus.OK);
+    }
+    
+    // US 09 - Filtered and sorted activity history.
+    // All query params are optional except userId (path variable).
+    // sortBy: "date" (default) sorts by activityDate DESC;
+    //         "amount" sorts by activityValue DESC (activityValue in entity/DTO).
+    //         Any other value silently defaults to date — intentional.
+    // Returns [] when no results match the filters — not an error.
+    // Differs from GET /activity-logs/users/{userId} which throws when history is empty.
+    @GetMapping(value = "/activity-logs/users/{userId}/search")
+    public ResponseEntity<List<ActivityLogResponseDTO>> getFilteredActivityHistory(
+            @PathVariable Integer userId,
+            @RequestParam(required = false)
+                @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false)
+                @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) ActivityType activityType,
+            @RequestParam(required = false) Double minValue,
+            @RequestParam(required = false) Double maxValue,
+            @RequestParam(required = false, defaultValue = "date") String sortBy)
+            throws WellnessTrackerException {
+        List<ActivityLogResponseDTO> results = activityService.getFilteredActivityHistory(
+                userId, fromDate, toDate, activityType, minValue, maxValue, sortBy);
+        return new ResponseEntity<>(results, HttpStatus.OK);
+    }
+ 
+    // US 09 - Export filtered activity history as a CSV file download.
+    // Accepts the same filter and sort params as /search.
+    // Returns the CSV as an attachment with filename activity_history_{userId}.csv.
+    @GetMapping(value = "/activity-logs/users/{userId}/export")
+    public ResponseEntity<byte[]> exportActivityHistory(
+            @PathVariable Integer userId,
+            @RequestParam(required = false)
+                @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false)
+                @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) ActivityType activityType,
+            @RequestParam(required = false) Double minValue,
+            @RequestParam(required = false) Double maxValue,
+            @RequestParam(required = false, defaultValue = "date") String sortBy)
+            throws WellnessTrackerException {
+ 
+        byte[] csv = activityService.exportActivityHistoryCsv(
+                userId, fromDate, toDate, activityType, minValue, maxValue, sortBy);
+ 
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("text/csv"));
+        headers.setContentDisposition(
+                ContentDisposition.attachment()
+                        .filename("activity_history_" + userId + ".csv")
+                        .build());
+ 
+        return new ResponseEntity<>(csv, headers, HttpStatus.OK);
     }
 }

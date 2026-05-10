@@ -1,8 +1,13 @@
 package com.infy.service;
 
+import java.io.ByteArrayOutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -174,7 +179,96 @@ public class ActivityLogServiceImpl implements ActivityLogService {
         return result;
     }
 
-    // Shared mapping used by create, update, and get history
+    // US 09 - Filtered and sorted activity history.
+    // Returns [] on empty — consistent with chart/list endpoint rule.
+    // Differs from getActivityHistory() which throws NO_ACTIVITY_FOUND when empty.
+    // sortBy="amount" maps to activityValue field; any other value defaults to date.
+    @Override
+    @Transactional(readOnly = true)
+    public List<ActivityLogResponseDTO> getFilteredActivityHistory(
+            Integer userId,
+            LocalDate fromDate,
+            LocalDate toDate,
+            ActivityType activityType,
+            Double minValue,
+            Double maxValue,
+            String sortBy) throws WellnessTrackerException {
+ 
+        if (!userRepository.existsById(userId)) {
+            throw new WellnessTrackerException("Service.USER_NOT_FOUND");
+        }
+ 
+        if (fromDate != null && toDate != null && fromDate.isAfter(toDate)) {
+            throw new WellnessTrackerException("Service.INVALID_DATE_RANGE");
+        }
+ 
+        if (minValue != null && maxValue != null && minValue > maxValue) {
+            throw new WellnessTrackerException("Service.INVALID_VALUE_RANGE");
+        }
+ 
+        List<ActivityLog> logs = "amount".equalsIgnoreCase(sortBy)
+                ? activityLogRepository.findFilteredSortByAmount(
+                        userId, fromDate, toDate, activityType, minValue, maxValue)
+                : activityLogRepository.findFilteredSortByDate(
+                        userId, fromDate, toDate, activityType, minValue, maxValue);
+ 
+        List<ActivityLogResponseDTO> responseList = new ArrayList<>();
+        for (ActivityLog log : logs) {
+            responseList.add(mapToDTO(log));
+        }
+        return responseList;
+    }
+ 
+    // US 09 - Export filtered activity history as a UTF-8 CSV byte array.
+    // Uses the same filters and sort logic as getFilteredActivityHistory.
+    // The caller (ActivityLogAPI) sets the Content-Disposition and Content-Type headers.
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] exportActivityHistoryCsv(
+            Integer userId,
+            LocalDate fromDate,
+            LocalDate toDate,
+            ActivityType activityType,
+            Double minValue,
+            Double maxValue,
+            String sortBy) throws WellnessTrackerException {
+ 
+        // Reuse filter validation and data fetch from the search method
+        List<ActivityLogResponseDTO> data = getFilteredActivityHistory(
+                userId, fromDate, toDate, activityType, minValue, maxValue, sortBy);
+ 
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (PrintWriter writer = new PrintWriter(
+                new OutputStreamWriter(out, StandardCharsets.UTF_8))) {
+            // Header row
+            writer.println("Activity Log ID,User ID,User Name,Activity Type," +
+                           "Activity Date,Activity Value,Unit,Notes,Created At");
+ 
+            // Data rows — quote fields that may contain commas (notes, user name)
+            for (ActivityLogResponseDTO dto : data) {
+                writer.printf(Locale.US, "%d,%d,\"%s\",%s,%s,%.2f,\"%s\",\"%s\",%s%n",
+                        dto.getActivityLogId(),
+                        dto.getUserId(),
+                        escapeCsv(dto.getUserName()),
+                        dto.getActivityType(),
+                        dto.getActivityDate(),
+                        dto.getActivityValue(),
+                        escapeCsv(dto.getUnit()),
+                        dto.getNotes() != null ? escapeCsv(dto.getNotes()) : "",
+                        dto.getCreatedAt());
+            }
+        }
+ 
+        return out.toByteArray();
+    }
+ 
+    // Escapes double quotes inside a CSV field value by doubling them.
+    private String escapeCsv(String value) {
+        if (value == null) return "";
+        return value.replace("\"", "\"\"");
+    }
+ 
+    // Shared mapping used by create, update, get history, and filtered search
     private ActivityLogResponseDTO mapToDTO(ActivityLog log) {
         ActivityLogResponseDTO dto = new ActivityLogResponseDTO();
         dto.setActivityLogId(log.getActivityLogId());

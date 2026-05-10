@@ -1,0 +1,216 @@
+package com.infy.service;
+
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.infy.dto.ActivityLogResponseDTO;
+import com.infy.dto.ActivityMetricDTO;
+import com.infy.dto.ActivitySummaryDTO;
+import com.infy.dto.DashboardResponseDTO;
+import com.infy.dto.MoodLogResponseDTO;
+import com.infy.dto.MyChallengeResponseDTO;
+import com.infy.dto.WeeklyGoalResponseDTO;
+import com.infy.entity.ActivityLog;
+import com.infy.entity.MoodLog;
+import com.infy.entity.WeeklyGoal;
+import com.infy.enums.ActivityType;
+import com.infy.enums.ChallengeStatus;
+import com.infy.exception.WellnessTrackerException;
+import com.infy.repository.ActivityLogRepository;
+import com.infy.repository.MoodLogRepository;
+import com.infy.repository.NotificationRepository;
+import com.infy.repository.UserRepository;
+import com.infy.repository.WeeklyGoalRepository;
+
+@Service
+@Transactional
+public class DashboardServiceImpl implements DashboardService {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private ActivityLogRepository activityLogRepository;
+
+    @Autowired
+    private MoodLogRepository moodLogRepository;
+
+    @Autowired
+    private WeeklyGoalRepository weeklyGoalRepository;
+
+    @Autowired
+    private NotificationRepository notificationRepository;
+
+    @Autowired
+    private ChallengeParticipantService participantService;
+
+    @Override
+    public DashboardResponseDTO getDashboard(Integer userId) throws WellnessTrackerException {
+        if (!userRepository.existsById(userId)) {
+            throw new WellnessTrackerException("Service.USER_NOT_FOUND");
+        }
+
+        LocalDate today = LocalDate.now();
+        LocalDate thisWeekMonday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+
+        DashboardResponseDTO response = new DashboardResponseDTO();
+
+        // 1. Recent activities — top 5, newest first
+        List<ActivityLog> recentLogs = activityLogRepository
+                .findTop5ByUser_UserIdOrderByActivityDateDescCreatedAtDesc(userId);
+        List<ActivityLogResponseDTO> recentActivities = new ArrayList<>();
+        for (ActivityLog log : recentLogs) {
+            recentActivities.add(mapActivityToDTO(log));
+        }
+        response.setRecentActivities(recentActivities);
+
+        // 2. Active joined challenges — getMyChallenges returns all joined challenges
+        // filter here to ACTIVE status only using the live status field set by the service.
+        List<MyChallengeResponseDTO> activeChallenges = new ArrayList<>();
+        List<MyChallengeResponseDTO> allJoined = participantService.getMyChallenges(userId);
+        for (MyChallengeResponseDTO dto : allJoined) {
+            if (ChallengeStatus.ACTIVE.equals(dto.getChallengeStatus())) {
+                activeChallenges.add(dto);
+            }
+        }
+        response.setActiveChallenges(activeChallenges);
+
+        // 3. This week's activity summary — Monday to today
+        Integer totalActivities = activityLogRepository
+                .countByUser_UserIdAndActivityDateBetween(userId, thisWeekMonday, today);
+
+        List<Object[]> rawSummary = activityLogRepository
+                .findSummaryByUserAndDateRange(userId, thisWeekMonday, today);
+
+        List<ActivityMetricDTO> metrics = new ArrayList<>();
+        for (Object[] row : rawSummary) {
+            ActivityMetricDTO metric = new ActivityMetricDTO();
+            metric.setActivityType((ActivityType) row[0]);
+            metric.setTotalValue(((Number) row[1]).doubleValue());
+            metric.setUnit((String) row[2]);
+            metrics.add(metric);
+        }
+
+        ActivitySummaryDTO weekSummary = new ActivitySummaryDTO();
+        weekSummary.setUserId(userId);
+        weekSummary.setFromDate(thisWeekMonday);
+        weekSummary.setToDate(today);
+        weekSummary.setTotalActivities(totalActivities != null ? totalActivities : 0);
+        weekSummary.setMetrics(metrics);
+        response.setWeekSummary(weekSummary);
+
+        // 4. Weekly goal for this week — null if not set (never throws)
+        Optional<WeeklyGoal> goalOptional = weeklyGoalRepository
+                .findByUser_UserIdAndWeekStartDate(userId, thisWeekMonday);
+        if (goalOptional.isPresent()) {
+            WeeklyGoal goal = goalOptional.get();
+            LocalDate weekEndDate = thisWeekMonday.plusDays(6);
+
+            List<Object[]> actuals = activityLogRepository
+                    .findActualsByUserAndDateRange(userId, thisWeekMonday, today);
+
+            double stepsActual = 0, workoutActual = 0, waterActual = 0,
+                   meditationActual = 0, sleepActual = 0;
+
+            for (Object[] row : actuals) {
+                ActivityType type = (ActivityType) row[0];
+                double value = ((Number) row[1]).doubleValue();
+                switch (type) {
+                    case STEPS      -> stepsActual      = value;
+                    case WORKOUT    -> workoutActual    = value;
+                    case WATER      -> waterActual      = value;
+                    case MEDITATION -> meditationActual = value;
+                    case SLEEP      -> sleepActual      = value;
+                    default         -> { }
+                }
+            }
+
+            WeeklyGoalResponseDTO goalDTO = new WeeklyGoalResponseDTO();
+            goalDTO.setWeeklyGoalId(goal.getWeeklyGoalId());
+            goalDTO.setUserId(userId);
+            goalDTO.setWeekStartDate(thisWeekMonday);
+            goalDTO.setWeekEndDate(weekEndDate);
+            goalDTO.setStepsGoal(goal.getStepsGoal());
+            goalDTO.setWorkoutGoal(goal.getWorkoutGoal());
+            goalDTO.setWaterGoal(goal.getWaterGoal());
+            goalDTO.setMeditationGoal(goal.getMeditationGoal());
+            goalDTO.setSleepGoalHours(goal.getSleepGoalHours());
+            goalDTO.setStepsActual(stepsActual);
+            goalDTO.setWorkoutActual(workoutActual);
+            goalDTO.setWaterActual(waterActual);
+            goalDTO.setMeditationActual(meditationActual);
+            goalDTO.setSleepActual(sleepActual);
+            goalDTO.setStepsProgressPct(calcPct(stepsActual, goal.getStepsGoal()));
+            goalDTO.setWorkoutProgressPct(calcPct(workoutActual, goal.getWorkoutGoal()));
+            goalDTO.setWaterProgressPct(calcPct(waterActual, goal.getWaterGoal()));
+            goalDTO.setMeditationProgressPct(calcPct(meditationActual, goal.getMeditationGoal()));
+            goalDTO.setSleepProgressPct(calcPct(sleepActual, goal.getSleepGoalHours()));
+
+            response.setWeeklyGoal(goalDTO);
+        }
+        // goalOptional empty → weeklyGoal stays null in response
+
+        // 5. Today's mood log — null if not logged today (never throws)
+        Optional<MoodLog> moodOptional = moodLogRepository
+                .findByUser_UserIdAndLogDate(userId, today);
+        if (moodOptional.isPresent()) {
+            MoodLog mood = moodOptional.get();
+            MoodLogResponseDTO moodDTO = new MoodLogResponseDTO();
+            moodDTO.setMoodLogId(mood.getMoodLogId());
+            moodDTO.setUserId(mood.getUser().getUserId());
+            moodDTO.setLogDate(mood.getLogDate());
+            moodDTO.setMoodScore(mood.getMoodScore());
+            moodDTO.setMoodLabel(getMoodLabel(mood.getMoodScore()));
+            moodDTO.setNote(mood.getNote());
+            moodDTO.setCreatedAt(mood.getCreatedAt());
+            response.setTodayMood(moodDTO);
+        }
+        // moodOptional empty → todayMood stays null in response
+
+        // 6. Unread notification count
+        Integer unreadCount = notificationRepository
+                .countByUser_UserIdAndIsReadFalse(userId);
+        response.setUnreadNotificationCount(unreadCount != null ? unreadCount : 0);
+
+        return response;
+    }
+
+    private ActivityLogResponseDTO mapActivityToDTO(ActivityLog log) {
+        ActivityLogResponseDTO dto = new ActivityLogResponseDTO();
+        dto.setActivityLogId(log.getActivityLogId());
+        dto.setUserId(log.getUser().getUserId());
+        dto.setUserName(log.getUser().getFirstName() + " " + log.getUser().getLastName());
+        dto.setActivityType(log.getActivityType());
+        dto.setActivityDate(log.getActivityDate());
+        dto.setActivityValue(log.getActivityValue());
+        dto.setUnit(log.getUnit());
+        dto.setNotes(log.getNotes());
+        dto.setCreatedAt(log.getCreatedAt());
+        return dto;
+    }
+
+    private String getMoodLabel(Integer score) {
+        return switch (score) {
+            case 1 -> "Very Low";
+            case 2 -> "Low";
+            case 3 -> "OK";
+            case 4 -> "Good";
+            case 5 -> "Great";
+            default -> "Unknown";
+        };
+    }
+
+    private Integer calcPct(double actual, Double goal) {
+        if (goal == null || goal == 0) return 0;
+        int pct = (int) ((actual / goal) * 100);
+        return Math.min(pct, 100);
+    }
+}

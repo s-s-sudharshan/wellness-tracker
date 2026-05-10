@@ -31,4 +31,28 @@ public interface ActivityLogService {
     // US 01 - Delete an activity log (ownership guarded)
     public void deleteActivityLog(Integer activityLogId, Integer userId)
             throws WellnessTrackerException;
+    
+    // US 09 - Filtered and sorted activity history.
+    // All filter params are optional (nullable). sortBy accepts "date" or "amount";
+    // any other value defaults silently to date. Returns [] on empty — not an error.
+    public List<ActivityLogResponseDTO> getFilteredActivityHistory(
+            Integer userId,
+            LocalDate fromDate,
+            LocalDate toDate,
+            ActivityType activityType,
+            Double minValue,
+            Double maxValue,
+            String sortBy) throws WellnessTrackerException;
+ 
+    // US 09 - Export filtered activity history as a CSV byte array.
+    // Accepts the same filter and sort params as getFilteredActivityHistory.
+    // Returns raw CSV bytes — caller writes Content-Disposition header.
+    public byte[] exportActivityHistoryCsv(
+            Integer userId,
+            LocalDate fromDate,
+            LocalDate toDate,
+            ActivityType activityType,
+            Double minValue,
+            Double maxValue,
+            String sortBy) throws WellnessTrackerException;
 }

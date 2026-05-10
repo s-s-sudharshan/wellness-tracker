@@ -47,6 +47,7 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
     @Autowired
     private ActivityLogRepository activityLogRepository;
     
+    @Autowired
     private NotificationRepository notificationRepository;
 
     @Autowired
@@ -174,7 +175,7 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
                 .findByUser_UserIdOrderByJoinedAtDesc(userId);
 
         if (participations.isEmpty()) {
-            throw new WellnessTrackerException("Service.NO_JOINED_CHALLENGES");
+        	return new ArrayList<>();
         }
 
         LocalDate today = LocalDate.now();
