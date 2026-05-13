@@ -46,7 +46,7 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
 
     @Autowired
     private ActivityLogRepository activityLogRepository;
-    
+
     @Autowired
     private NotificationRepository notificationRepository;
 
@@ -124,6 +124,7 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
     // US 03 - Active/upcoming challenge catalog for a user.
     // Uses syncAndNotifyActivations() so participants are notified when a
     // challenge they joined goes ACTIVE.
+    // Null-dept guard: returns empty list if user has no department.
     @Override
     @Transactional(readOnly = false)
     public List<ActiveChallengeResponseDTO> getActiveChallenges(Integer userId)
@@ -134,8 +135,14 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
 
         statusSyncService.syncAndNotifyActivations();
 
+        // Null-dept guard — return empty list if user has no department
+        if (user.getDepartment() == null) {
+            return new ArrayList<>();
+        }
+
+        LocalDate today = LocalDate.now();
         List<Challenge> challenges = challengeRepository.findVisibleChallengesForDepartment(
-                LocalDate.now(), user.getDepartment().getDepartmentId());
+                today, user.getDepartment().getDepartmentId());
 
         if (challenges.isEmpty()) {
             return new ArrayList<>();
@@ -151,7 +158,7 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
 
         List<ActiveChallengeResponseDTO> responseList = new ArrayList<>();
         for (Challenge c : challenges) {
-            ActiveChallengeResponseDTO dto = mapToActiveDTO(c);
+            ActiveChallengeResponseDTO dto = mapToActiveDTO(c, today);
             dto.setAlreadyJoined(joinedIdSet.contains(c.getChallengeId()));
             responseList.add(dto);
         }
@@ -175,7 +182,7 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
                 .findByUser_UserIdOrderByJoinedAtDesc(userId);
 
         if (participations.isEmpty()) {
-        	return new ArrayList<>();
+            return new ArrayList<>();
         }
 
         LocalDate today = LocalDate.now();
@@ -213,7 +220,7 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
                         .findActualsByUserAndDateRange(userId, c.getStartDate(), challengeEnd);
                 actualValue = 0.0;
                 for (Object[] row : challengeActuals) {
-                    if (row[0].equals(c.getMetricType())) {
+                    if (c.getMetricType().equals(row[0])) {
                         actualValue = ((Number) row[1]).doubleValue();
                         break;
                     }
@@ -224,18 +231,19 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
 
             // Derive status live from dates instead of reading stale DB column
             ChallengeStatus liveStatus = resolveStatus(c.getStartDate(), c.getEndDate());
-            
+
             if (progressPct >= 100 && ChallengeStatus.ACTIVE.equals(liveStatus)) {
                 boolean alreadyNotified = notificationRepository
-                    .existsByUser_UserIdAndNotificationTypeAndReferenceId(
-                        userId, NotificationType.CHALLENGE, -c.getChallengeId());
+                        .existsByUser_UserIdAndNotificationTypeAndReferenceId(
+                                userId, NotificationType.CHALLENGE, -c.getChallengeId());
                 if (!alreadyNotified) {
                     notificationService.createNotification(
-                        userId,
-                        NotificationType.CHALLENGE,
-                        "Challenge Completed: " + c.getTitle(),
-                        "You've reached 100% of your goal in '" + c.getTitle() + "'. Great work!",
-                        -c.getChallengeId());
+                            userId,
+                            NotificationType.CHALLENGE,
+                            "Challenge Completed: " + c.getTitle(),
+                            "You've reached 100% of your goal in '" + c.getTitle()
+                                    + "'. Great work!",
+                            -c.getChallengeId());
                 }
             }
 
@@ -276,7 +284,12 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
         return ChallengeStatus.ACTIVE;
     }
 
-    private ActiveChallengeResponseDTO mapToActiveDTO(Challenge c) {
+    // Maps a Challenge entity to ActiveChallengeResponseDTO.
+    // daysRemaining is clamped to 0 for challenges whose endDate has passed.
+    private ActiveChallengeResponseDTO mapToActiveDTO(Challenge c, LocalDate today) {
+        long rawDays = ChronoUnit.DAYS.between(today, c.getEndDate());
+        int daysRemaining = (int) Math.max(0, rawDays);
+
         ActiveChallengeResponseDTO dto = new ActiveChallengeResponseDTO();
         dto.setChallengeId(c.getChallengeId());
         dto.setTitle(c.getTitle());
@@ -289,13 +302,14 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
         dto.setDifficulty(c.getDifficulty());
         dto.setStartDate(c.getStartDate());
         dto.setEndDate(c.getEndDate());
+        dto.setDaysRemaining(daysRemaining);
         dto.setIsFeatured(c.getIsFeatured());
         dto.setStatus(c.getStatus());
         if (c.getDepartment() != null) {
             dto.setDepartmentName(c.getDepartment().getDepartmentName());
         }
         if (c.getRewardBadgeId() != null) {
-        	dto.setRewardBadgeId(c.getRewardBadgeId());
+            dto.setRewardBadgeId(c.getRewardBadgeId());
         }
         return dto;
     }

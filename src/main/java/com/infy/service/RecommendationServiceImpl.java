@@ -186,7 +186,7 @@ public class RecommendationServiceImpl implements RecommendationService {
         Recommendation rec = new Recommendation();
         rec.setUser(user);
         rec.setRecommendationType(RecommendationType.CHALLENGE);
-        rec.setTitle(challengeTitle(metric));
+        rec.setTitle(challenge.getTitle());
         rec.setDescription(challengeDescription(metric));
         rec.setChallengeId(challenge.getChallengeId());
         rec.setStatus(RecommendationStatus.ACTIVE);
@@ -203,17 +203,6 @@ public class RecommendationServiceImpl implements RecommendationService {
         rec.setArticleUrl(url);
         rec.setStatus(RecommendationStatus.ACTIVE);
         return rec;
-    }
-
-    private String challengeTitle(ActivityType metric) {
-        return switch (metric) {
-            case WATER      -> "Stay Hydrated — Join a Water Challenge";
-            case STEPS      -> "Get Moving — Steps Challenge";
-            case WORKOUT    -> "Level Up — Join a Workout Challenge";
-            case SLEEP      -> "Sleep Reset Challenge";
-            case MEDITATION -> "Find Your Focus — Meditation Challenge";
-            default         -> "Wellness Challenge";
-        };
     }
 
     private String challengeDescription(ActivityType metric) {

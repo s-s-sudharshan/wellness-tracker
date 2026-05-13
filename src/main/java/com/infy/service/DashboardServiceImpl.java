@@ -2,37 +2,53 @@ package com.infy.service;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.infy.dto.ActiveChallengeResponseDTO;
 import com.infy.dto.ActivityLogResponseDTO;
 import com.infy.dto.ActivityMetricDTO;
 import com.infy.dto.ActivitySummaryDTO;
 import com.infy.dto.DashboardResponseDTO;
 import com.infy.dto.MoodLogResponseDTO;
 import com.infy.dto.MyChallengeResponseDTO;
+import com.infy.dto.RecommendationResponseDTO;
 import com.infy.dto.WeeklyGoalResponseDTO;
 import com.infy.entity.ActivityLog;
+import com.infy.entity.Challenge;
 import com.infy.entity.MoodLog;
+import com.infy.entity.Recommendation;
+import com.infy.entity.User;
 import com.infy.entity.WeeklyGoal;
 import com.infy.enums.ActivityType;
 import com.infy.enums.ChallengeStatus;
+import com.infy.enums.RecommendationStatus;
 import com.infy.exception.WellnessTrackerException;
 import com.infy.repository.ActivityLogRepository;
+import com.infy.repository.ChallengeParticipantRepository;
+import com.infy.repository.ChallengeRepository;
 import com.infy.repository.MoodLogRepository;
 import com.infy.repository.NotificationRepository;
+import com.infy.repository.RecommendationRepository;
 import com.infy.repository.UserRepository;
 import com.infy.repository.WeeklyGoalRepository;
 
 @Service
 @Transactional
 public class DashboardServiceImpl implements DashboardService {
+
+    private static final int RECOMMENDED_CHALLENGES_MAX = 5;
 
     @Autowired
     private UserRepository userRepository;
@@ -50,13 +66,22 @@ public class DashboardServiceImpl implements DashboardService {
     private NotificationRepository notificationRepository;
 
     @Autowired
+    private ChallengeRepository challengeRepository;
+
+    @Autowired
+    private ChallengeParticipantRepository participantRepository;
+
+    @Autowired
     private ChallengeParticipantService participantService;
+
+    @Autowired
+    private RecommendationRepository recommendationRepository;
 
     @Override
     public DashboardResponseDTO getDashboard(Integer userId) throws WellnessTrackerException {
-        if (!userRepository.existsById(userId)) {
-            throw new WellnessTrackerException("Service.USER_NOT_FOUND");
-        }
+        Optional<User> userOptional = userRepository.findById(userId);
+        User user = userOptional.orElseThrow(
+                () -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
 
         LocalDate today = LocalDate.now();
         LocalDate thisWeekMonday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
@@ -72,8 +97,7 @@ public class DashboardServiceImpl implements DashboardService {
         }
         response.setRecentActivities(recentActivities);
 
-        // 2. Active joined challenges — getMyChallenges returns all joined challenges
-        // filter here to ACTIVE status only using the live status field set by the service.
+        // 2. Active joined challenges — filter ACTIVE status from getMyChallenges()
         List<MyChallengeResponseDTO> activeChallenges = new ArrayList<>();
         List<MyChallengeResponseDTO> allJoined = participantService.getMyChallenges(userId);
         for (MyChallengeResponseDTO dto : allJoined) {
@@ -180,7 +204,155 @@ public class DashboardServiceImpl implements DashboardService {
                 .countByUser_UserIdAndIsReadFalse(userId);
         response.setUnreadNotificationCount(unreadCount != null ? unreadCount : 0);
 
+        // 7. US 07 — Featured challenges visible to user's department.
+        // Null-dept guard: return empty list if user has no department.
+        Integer userDeptId = user.getDepartment() != null
+                ? user.getDepartment().getDepartmentId() : null;
+
+        if (userDeptId != null) {
+            List<Challenge> featuredList = challengeRepository
+                    .findFeaturedChallengesForDepartment(today, userDeptId);
+
+            List<Integer> featuredIds = new ArrayList<>();
+            for (Challenge c : featuredList) {
+                featuredIds.add(c.getChallengeId());
+            }
+
+            Set<Integer> joinedFeaturedIds = featuredIds.isEmpty()
+                    ? new HashSet<>()
+                    : new HashSet<>(participantRepository
+                            .findJoinedChallengeIdsByUser(userId, featuredIds));
+
+            List<ActiveChallengeResponseDTO> featuredDTOs = new ArrayList<>();
+            for (Challenge c : featuredList) {
+                ActiveChallengeResponseDTO dto = mapToChallengeDTO(c, today);
+                dto.setAlreadyJoined(joinedFeaturedIds.contains(c.getChallengeId()));
+                featuredDTOs.add(dto);
+            }
+            response.setFeaturedChallenges(featuredDTOs);
+        } else {
+            response.setFeaturedChallenges(new ArrayList<>());
+        }
+
+        // 8. US 07 — Recommended challenges ranked by last-30-days activity frequency.
+        // Null-dept guard: return empty list if user has no department.
+        response.setRecommendedChallenges(
+                buildRecommendedChallenges(userId, userDeptId, today));
+
+        // 9. US 08 — Personalised wellness recommendations.
+        // Read persisted ACTIVE recommendations directly — dashboard GET must not
+        // regenerate, delete, or recreate recommendation rows on every refresh.
+        // Regeneration stays in GET /wellness/recommendations/users/{userId}.
+        List<Recommendation> persistedRecs = recommendationRepository
+                .findByUser_UserIdAndStatusOrderByCreatedAtDesc(
+                        userId, RecommendationStatus.ACTIVE);
+        List<RecommendationResponseDTO> recommendations = new ArrayList<>();
+        for (Recommendation rec : persistedRecs) {
+            recommendations.add(mapRecommendationToDTO(rec));
+        }
+        response.setRecommendations(recommendations);
+
         return response;
+    }
+
+    // Builds the recommended challenges list for the dashboard.
+    // Algorithm:
+    //   1. Fetch last-30-days activity frequency per type, sorted by count DESC.
+    //   2. Load all visible unjoined challenges for the user's department.
+    //   3. Iterate metrics strongest-first; for each metric add all matching
+    //      unjoined challenges until the cap of 5 is reached.
+    //   4. Return empty list if user has no department or no activity in last 30 days.
+    private List<ActiveChallengeResponseDTO> buildRecommendedChallenges(
+            Integer userId, Integer userDeptId, LocalDate today) {
+
+        if (userDeptId == null) {
+            return new ArrayList<>();
+        }
+
+        LocalDate thirtyDaysAgo = today.minusDays(29); // inclusive 30-day window
+
+        List<Object[]> frequencyRows = activityLogRepository
+                .countActivityFrequencyByUserAndDateRange(userId, thirtyDaysAgo, today);
+
+        // No activity in last 30 days — return empty list per plan decision
+        if (frequencyRows.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // Build ordered list of activity types: strongest habit first
+        // LinkedHashMap preserves insertion order (already sorted by query DESC)
+        Map<ActivityType, Long> frequencyMap = new LinkedHashMap<>();
+        for (Object[] row : frequencyRows) {
+            ActivityType type  = (ActivityType) row[0];
+            long count         = ((Number) row[1]).longValue();
+            frequencyMap.put(type, count);
+        }
+
+        // Load all visible non-expired challenges for this user's department
+        List<Challenge> visibleChallenges = challengeRepository
+                .findVisibleChallengesForDepartment(today, userDeptId);
+
+        if (visibleChallenges.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // Find which of these challenges the user has already joined
+        List<Integer> visibleIds = new ArrayList<>();
+        for (Challenge c : visibleChallenges) {
+            visibleIds.add(c.getChallengeId());
+        }
+        Set<Integer> joinedIds = new HashSet<>(
+                participantRepository.findJoinedChallengeIdsByUser(userId, visibleIds));
+
+        // Build result: iterate metrics strongest-first, add matching unjoined challenges
+        List<ActiveChallengeResponseDTO> result = new ArrayList<>();
+        for (ActivityType metric : frequencyMap.keySet()) {
+            if (result.size() >= RECOMMENDED_CHALLENGES_MAX) {
+                break;
+            }
+            for (Challenge c : visibleChallenges) {
+                if (result.size() >= RECOMMENDED_CHALLENGES_MAX) {
+                    break;
+                }
+                if (metric.equals(c.getMetricType()) && !joinedIds.contains(c.getChallengeId())) {
+                    ActiveChallengeResponseDTO dto = mapToChallengeDTO(c, today);
+                    dto.setAlreadyJoined(false);
+                    result.add(dto);
+                }
+            }
+        }
+
+        return result;
+    }
+
+    // Maps a Challenge entity to ActiveChallengeResponseDTO.
+    // daysRemaining is clamped to 0 for challenges whose endDate has passed.
+    private ActiveChallengeResponseDTO mapToChallengeDTO(Challenge c, LocalDate today) {
+        long rawDays = ChronoUnit.DAYS.between(today, c.getEndDate());
+        int daysRemaining = (int) Math.max(0, rawDays);
+
+        ActiveChallengeResponseDTO dto = new ActiveChallengeResponseDTO();
+        dto.setChallengeId(c.getChallengeId());
+        dto.setTitle(c.getTitle());
+        dto.setDescription(c.getDescription());
+        dto.setCreatedByName(
+                c.getCreatedBy().getFirstName() + " " + c.getCreatedBy().getLastName());
+        dto.setMetricType(c.getMetricType());
+        dto.setUnit(resolveUnit(c.getMetricType()));
+        dto.setGoalValue(c.getGoalValue());
+        dto.setDifficulty(c.getDifficulty());
+        dto.setStartDate(c.getStartDate());
+        dto.setEndDate(c.getEndDate());
+        dto.setDaysRemaining(daysRemaining);
+        dto.setIsFeatured(c.getIsFeatured());
+        dto.setStatus(c.getStatus());
+        if (c.getDepartment() != null) {
+            dto.setDepartmentName(c.getDepartment().getDepartmentName());
+        }
+        if (c.getRewardBadgeId() != null) {
+            dto.setRewardBadgeId(c.getRewardBadgeId());
+        }
+        return dto;
     }
 
     private ActivityLogResponseDTO mapActivityToDTO(ActivityLog log) {
@@ -212,5 +384,30 @@ public class DashboardServiceImpl implements DashboardService {
         if (goal == null || goal == 0) return 0;
         int pct = (int) ((actual / goal) * 100);
         return Math.min(pct, 100);
+    }
+
+    private RecommendationResponseDTO mapRecommendationToDTO(Recommendation rec) {
+        RecommendationResponseDTO dto = new RecommendationResponseDTO();
+        dto.setRecommendationId(rec.getRecommendationId());
+        dto.setUserId(rec.getUser().getUserId());
+        dto.setRecommendationType(rec.getRecommendationType());
+        dto.setTitle(rec.getTitle());
+        dto.setDescription(rec.getDescription());
+        dto.setChallengeId(rec.getChallengeId());
+        dto.setArticleUrl(rec.getArticleUrl());
+        dto.setStatus(rec.getStatus());
+        dto.setCreatedAt(rec.getCreatedAt());
+        return dto;
+    }
+
+    private String resolveUnit(ActivityType metricType) {
+        return switch (metricType) {
+            case STEPS      -> "steps";
+            case WORKOUT    -> "minutes";
+            case MEDITATION -> "minutes";
+            case WATER      -> "liters";
+            case SLEEP      -> "hours";
+            case OTHER      -> "units";
+        };
     }
 }

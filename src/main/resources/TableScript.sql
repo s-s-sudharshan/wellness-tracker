@@ -156,6 +156,7 @@ CREATE TABLE IF NOT EXISTS notifications (
     title VARCHAR(150) NOT NULL,
     message VARCHAR(500) NOT NULL,
     is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    reference_id INT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (notification_id),
     CONSTRAINT fk_notif_user FOREIGN KEY (user_id) REFERENCES users(user_id)
@@ -184,18 +185,31 @@ INSERT INTO departments (department_name) VALUES
 ('Marketing'),
 ('Human Resources');
 
--- Passwords are plain text (Spring Security deferred).
+-- ============================================================
+-- SEED USERS — passwords are BCrypt-encoded 'password123'
+--
+-- Hash used: $2a$10$E2L/3SYmtGaNAKB91xGHoOtmeNyy7iW9Pyb/gCDHUmcqadds9LHtC
+-- (BCrypt $2a$, cost factor 10 — compatible with Spring Security BCryptPasswordEncoder)
+--
+-- If you are migrating an existing database that still has plain-text passwords,
+-- run this UPDATE before restarting the application:
+--
+--   UPDATE users
+--   SET password_hash = '$2a$10$E2L/3SYmtGaNAKB91xGHoOtmeNyy7iW9Pyb/gCDHUmcqadds9LHtC'
+--   WHERE password_hash = 'password123';
+--
 -- user_id=1: Sarah Connor — MANAGER, Engineering
 -- user_id=2: John Doe    — EMPLOYEE, Engineering
 -- user_id=3: Jane Smith  — EMPLOYEE, Engineering
 -- user_id=4: Mike Jones  — EMPLOYEE, Marketing
--- user_id=5: Priya Patel — HR,       Human Resources
+-- user_id=5: Priya Patel — HR, Human Resources
+-- ============================================================
 INSERT INTO users (first_name, last_name, email, password_hash, role, department_id, manager_id, status) VALUES
-('Sarah', 'Connor', 'sarah.connor@infy.com', 'password123', 'MANAGER', 1, NULL, 'ACTIVE'),
-('John',  'Doe',    'john.doe@infy.com',     'password123', 'EMPLOYEE', 1, 1,    'ACTIVE'),
-('Jane',  'Smith',  'jane.smith@infy.com',   'password123', 'EMPLOYEE', 1, 1,    'ACTIVE'),
-('Mike',  'Jones',  'mike.j@infy.com',       'password123', 'EMPLOYEE', 2, NULL, 'ACTIVE'),
-('Priya', 'Patel',  'priya.p@infy.com',      'password123', 'HR',       3, NULL, 'ACTIVE');
+('Sarah', 'Connor', 'sarah.connor@infy.com', '$2a$10$E2L/3SYmtGaNAKB91xGHoOtmeNyy7iW9Pyb/gCDHUmcqadds9LHtC', 'MANAGER',  1, NULL, 'ACTIVE'),
+('John',  'Doe',    'john.doe@infy.com',     '$2a$10$E2L/3SYmtGaNAKB91xGHoOtmeNyy7iW9Pyb/gCDHUmcqadds9LHtC', 'EMPLOYEE', 1, 1,    'ACTIVE'),
+('Jane',  'Smith',  'jane.smith@infy.com',   '$2a$10$E2L/3SYmtGaNAKB91xGHoOtmeNyy7iW9Pyb/gCDHUmcqadds9LHtC', 'EMPLOYEE', 1, 1,    'ACTIVE'),
+('Mike',  'Jones',  'mike.j@infy.com',       '$2a$10$E2L/3SYmtGaNAKB91xGHoOtmeNyy7iW9Pyb/gCDHUmcqadds9LHtC', 'EMPLOYEE', 2, NULL, 'ACTIVE'),
+('Priya', 'Patel',  'priya.p@infy.com',      '$2a$10$E2L/3SYmtGaNAKB91xGHoOtmeNyy7iW9Pyb/gCDHUmcqadds9LHtC', 'HR',       3, NULL, 'ACTIVE');
 
 -- ============================================================
 -- Challenges — created by Sarah Connor (manager, user_id=1)
@@ -235,16 +249,9 @@ VALUES
 
 -- ============================================================
 -- Wellness Articles — published by Priya Patel (HR, user_id=5)
---
--- One PUBLISHED article per metric type (used by rule engine fallbacks).
--- Two PUBLISHED general articles with NULL related_metric (used by Pass B padding).
--- One DRAFT article to verify draft articles are correctly excluded.
---
--- URL uniqueness is required by the recommendation engine dedup contract.
 -- ============================================================
 INSERT INTO wellness_articles (created_by, title, description, article_url, related_metric, status)
 VALUES
--- Metric-specific articles (rule engine fallbacks)
 (5,
  'How to Hit Your Daily Hydration Goals',
  'Discover practical strategies to drink more water throughout the day, from habit stacking to flavoured infusions. Staying hydrated improves focus, energy, and recovery.',
@@ -280,7 +287,6 @@ VALUES
  'MEDITATION',
  'PUBLISHED'),
 
--- General wellness articles (Pass B padding — related_metric IS NULL)
 (5,
  'Building a Sustainable Wellness Routine',
  'Consistency beats intensity. Learn how to design a weekly wellness routine that balances activity, rest, nutrition, and mindfulness — without burning out in the first month.',
@@ -295,7 +301,6 @@ VALUES
  NULL,
  'PUBLISHED'),
 
--- Draft article — should never appear in recommendations
 (5,
  'Upcoming: Nutrition and Wellness (Draft)',
  'This article is still being written and should not appear in any recommendations.',
@@ -304,39 +309,23 @@ VALUES
  'DRAFT');
 
 -- ============================================================
--- Recommendation test data
--- Make John (user_id=2) trigger WATER and MEDITATION rules:
---   water total = 8L (below 10L threshold)
---   steps total = 40,000 (above 35,000 — rule should NOT fire)
---   workout total = 70 min (above 60 — rule should NOT fire)
---   sleep total = 52.5 hrs (above 42 — rule should NOT fire)
---   meditation total = 20 min (below 30 — rule should fire)
--- Expected result: WATER rule fires (challenge exists -> Hydration Hero),
---   MEDITATION rule fires (challenge exists -> Mindfulness Month),
---   both challenges already in candidates, padding fills remainder if needed.
+-- Recommendation test data (unchanged from original)
 -- ============================================================
 DELETE FROM challenge_participants WHERE user_id IN (2, 3, 4, 5);
 DELETE FROM recommendations         WHERE user_id IN (2, 3, 4, 5);
 DELETE FROM activity_logs           WHERE user_id IN (2, 3, 4, 5);
 
 INSERT INTO activity_logs (user_id, activity_type, activity_date, activity_value, unit) VALUES
--- Water: 2L/day x 4 days = 8L (below 10L threshold)
 (2, 'WATER',      CURDATE(),                      2.0, 'liters'),
 (2, 'WATER',      CURDATE() - INTERVAL 1 DAY,     2.0, 'liters'),
 (2, 'WATER',      CURDATE() - INTERVAL 2 DAY,     2.0, 'liters'),
 (2, 'WATER',      CURDATE() - INTERVAL 3 DAY,     2.0, 'liters'),
-
--- Steps: 10,000/day x 4 days = 40,000 (above 35,000 — no rule)
 (2, 'STEPS',      CURDATE(),                  10000.0, 'steps'),
 (2, 'STEPS',      CURDATE() - INTERVAL 1 DAY, 10000.0, 'steps'),
 (2, 'STEPS',      CURDATE() - INTERVAL 2 DAY, 10000.0, 'steps'),
 (2, 'STEPS',      CURDATE() - INTERVAL 3 DAY, 10000.0, 'steps'),
-
--- Workout: 35 min x 2 days = 70 min (above 60 — no rule)
 (2, 'WORKOUT',    CURDATE(),                     35.0, 'minutes'),
 (2, 'WORKOUT',    CURDATE() - INTERVAL 1 DAY,    35.0, 'minutes'),
-
--- Sleep: 7.5 hrs x 7 days = 52.5 hrs (above 42 — no rule)
 (2, 'SLEEP',      CURDATE(),                      7.5, 'hours'),
 (2, 'SLEEP',      CURDATE() - INTERVAL 1 DAY,     7.5, 'hours'),
 (2, 'SLEEP',      CURDATE() - INTERVAL 2 DAY,     7.5, 'hours'),
@@ -344,76 +333,38 @@ INSERT INTO activity_logs (user_id, activity_type, activity_date, activity_value
 (2, 'SLEEP',      CURDATE() - INTERVAL 4 DAY,     7.5, 'hours'),
 (2, 'SLEEP',      CURDATE() - INTERVAL 5 DAY,     7.5, 'hours'),
 (2, 'SLEEP',      CURDATE() - INTERVAL 6 DAY,     7.5, 'hours'),
-
--- Meditation: 10 min x 2 days = 20 min (below 30 — rule fires)
 (2, 'MEDITATION', CURDATE(),                     10.0, 'minutes'),
 (2, 'MEDITATION', CURDATE() - INTERVAL 1 DAY,    10.0, 'minutes');
 
 -- ============================================================
--- BADGES TABLE — add to your existing TableScript.sql
--- criteria_type maps to CriteriaType enum (VARCHAR)
--- criteria_value is the threshold DECIMAL(10,2)
+-- SEED BADGES
 -- ============================================================
-
--- ============================================================
--- SEED BADGES — test set covering all 14 criteria types
--- Add more via POST /wellness/badges after the app is running
--- ============================================================
-
 INSERT INTO badges (title, description, criteria_type, criteria_value, badge_icon, badge_color) VALUES
-
--- All-time steps
 ('First Steps',       'Log a lifetime total of 50,000 steps.',          'STEPS',       50000, 'bi-person-walking',       '#0d6efd'),
 ('Step Master',       'Log a lifetime total of 100,000 steps.',         'STEPS',      100000, 'bi-trophy',               '#6610f2'),
-
--- All-time water
 ('Hydration Starter', 'Log a lifetime total of 100 liters of water.',   'WATER',         100, 'bi-droplet',              '#0dcaf0'),
 ('Hydration Hero',    'Log a lifetime total of 500 liters of water.',   'WATER',         500, 'bi-droplet-fill',         '#0d6efd'),
-
--- All-time workout
 ('Workout Starter',   'Log 120 total minutes of workout.',              'WORKOUT',       120, 'bi-lightning',            '#ffc107'),
 ('Workout Warrior',   'Log 500 total minutes of workout.',              'WORKOUT',       500, 'bi-lightning-charge-fill','#dc3545'),
-
--- All-time meditation
 ('Mindful Starter',   'Log 60 total minutes of meditation.',            'MEDITATION',     60, 'bi-peace',                '#20c997'),
 ('Zen Master',        'Log 300 total minutes of meditation.',           'MEDITATION',    300, 'bi-yin-yang',             '#6610f2'),
-
--- All-time sleep
 ('Rest Starter',      'Log 56 total hours of sleep.',                   'SLEEP',          56, 'bi-moon',                 '#6f42c1'),
 ('Rest Champion',     'Log 200 total hours of sleep.',                  'SLEEP',         200, 'bi-moon-stars-fill',      '#6610f2'),
-
--- Daily personal best — steps
 ('Step Sprinter',     'Walk 10,000 steps in a single day.',             'DAILY_STEPS', 10000, 'bi-rocket',               '#fd7e14'),
 ('Step Dasher',       'Walk 20,000 steps in a single day.',             'DAILY_STEPS', 20000, 'bi-rocket-takeoff',       '#dc3545'),
-
--- Daily personal best — workout
 ('Sweat Session',     'Complete 60 minutes of workout in a single day.','DAILY_WORKOUT',  60, 'bi-heart-pulse',          '#d63384'),
 ('Workout Peak',      'Complete 120 minutes of workout in a single day.','DAILY_WORKOUT',120, 'bi-heart-pulse-fill',     '#dc3545'),
-
--- Weekly personal best — steps
 ('Active Week',       'Log 70,000 steps in a single week.',             'WEEKLY_STEPS',70000, 'bi-calendar-check',       '#198754'),
 ('Step Week Legend',  'Log 150,000 steps in a single week.',            'WEEKLY_STEPS',150000,'bi-calendar-fill',        '#6610f2'),
-
--- Weekly personal best — workout
 ('Weekly Grind',      'Log 150 minutes of workout in a single week.',   'WEEKLY_WORKOUT',150, 'bi-fire',                 '#fd7e14'),
 ('Workout Week Hero', 'Log 300 minutes of workout in a single week.',   'WEEKLY_WORKOUT',300, 'bi-fire',                 '#dc3545'),
-
--- Streak
 ('3-Day Streak',      'Log activity for 3 consecutive days.',           'STREAK',          3, 'bi-fire',                 '#fd7e14'),
 ('7-Day Streak',      'Log activity for 7 consecutive days.',           'STREAK',          7, 'bi-fire',                 '#dc3545'),
 ('30-Day Streak',     'Log activity for 30 consecutive days.',          'STREAK',         30, 'bi-fire',                 '#6f42c1'),
-
--- Challenges joined
 ('Team Player',       'Join your first challenge.',                     'CHALLENGES_JOINED',  1, 'bi-people',            '#0d6efd'),
 ('Challenge Seeker',  'Join 5 challenges.',                             'CHALLENGES_JOINED',  5, 'bi-people-fill',       '#198754'),
-
--- Challenges completed
 ('First Win',         'Complete your first challenge.',                 'CHALLENGES_COMPLETED',1,'bi-award',             '#ffc107'),
 ('Challenge Champion','Complete 5 challenges.',                         'CHALLENGES_COMPLETED',5,'bi-award-fill',        '#198754'),
-
--- Total logs
 ('Dedicated Logger',  'Log 10 activities of any type.',                 'TOTAL_LOGS',     10, 'bi-journal-check',        '#0dcaf0'),
 ('Consistency King',  'Log 50 activities of any type.',                 'TOTAL_LOGS',     50, 'bi-journal-richtext',     '#6610f2'),
-
--- Activity variety
 ('All-Rounder',       'Log all 5 different activity types at least once.','ACTIVITY_VARIETY',5,'bi-grid-fill',           '#fd7e14');

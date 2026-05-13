@@ -1,6 +1,7 @@
-	package com.infy.service;
+package com.infy.service;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -55,7 +56,7 @@ public class ChallengeServiceImpl implements ChallengeService {
 
     @Autowired
     private ChallengeParticipantRepository participantRepository;
-    
+
     @Autowired
     private BadgeRepository badgeRepository;
 
@@ -124,11 +125,12 @@ public class ChallengeServiceImpl implements ChallengeService {
                     () -> new WellnessTrackerException("Service.DEPARTMENT_NOT_FOUND"));
             challenge.setDepartment(department);
         }
-        
+
         if (requestDTO.getRewardBadgeId() != null) {
-        	Optional<Badge> badge = badgeRepository.findById(requestDTO.getRewardBadgeId());
-        	badge.orElseThrow(() -> new WellnessTrackerException("Service.BADGE_NOT_FOUND"));
-        	challenge.setRewardBadgeId(requestDTO.getRewardBadgeId());
+            Optional<Badge> badge = badgeRepository.findById(requestDTO.getRewardBadgeId());
+            badge.orElseThrow(
+                    () -> new WellnessTrackerException("Service.BADGE_NOT_FOUND"));
+            challenge.setRewardBadgeId(requestDTO.getRewardBadgeId());
         }
 
         Challenge saved = challengeRepository.save(challenge);
@@ -305,6 +307,7 @@ public class ChallengeServiceImpl implements ChallengeService {
     }
 
     // US 07 - Return featured, non-expired challenges visible to the user's department.
+    // Null-dept guard: returns empty list if user has no department.
     @Override
     @Transactional(readOnly = false)
     public List<ActiveChallengeResponseDTO> getFeaturedChallenges(Integer userId)
@@ -315,8 +318,14 @@ public class ChallengeServiceImpl implements ChallengeService {
 
         statusSyncService.syncStatuses();
 
+        // Null-dept guard — return empty list if user has no department
+        if (user.getDepartment() == null) {
+            return new ArrayList<>();
+        }
+
+        LocalDate today = LocalDate.now();
         List<Challenge> featured = challengeRepository.findFeaturedChallengesForDepartment(
-                LocalDate.now(), user.getDepartment().getDepartmentId());
+                today, user.getDepartment().getDepartmentId());
 
         if (featured.isEmpty()) {
             return new ArrayList<>();
@@ -332,7 +341,7 @@ public class ChallengeServiceImpl implements ChallengeService {
 
         List<ActiveChallengeResponseDTO> responseList = new ArrayList<>();
         for (Challenge c : featured) {
-            ActiveChallengeResponseDTO dto = mapToActiveDTO(c);
+            ActiveChallengeResponseDTO dto = mapToActiveDTO(c, today);
             dto.setAlreadyJoined(joinedIdSet.contains(c.getChallengeId()));
             responseList.add(dto);
         }
@@ -369,12 +378,17 @@ public class ChallengeServiceImpl implements ChallengeService {
             dto.setDepartmentName(c.getDepartment().getDepartmentName());
         }
         if (c.getRewardBadgeId() != null) {
-        	dto.setRewardBadgeId(c.getRewardBadgeId());
+            dto.setRewardBadgeId(c.getRewardBadgeId());
         }
         return dto;
     }
 
-    private ActiveChallengeResponseDTO mapToActiveDTO(Challenge c) {
+    // Maps a Challenge entity to ActiveChallengeResponseDTO.
+    // daysRemaining is clamped to 0 for challenges whose endDate has passed.
+    private ActiveChallengeResponseDTO mapToActiveDTO(Challenge c, LocalDate today) {
+        long rawDays = ChronoUnit.DAYS.between(today, c.getEndDate());
+        int daysRemaining = (int) Math.max(0, rawDays);
+
         ActiveChallengeResponseDTO dto = new ActiveChallengeResponseDTO();
         dto.setChallengeId(c.getChallengeId());
         dto.setTitle(c.getTitle());
@@ -387,13 +401,14 @@ public class ChallengeServiceImpl implements ChallengeService {
         dto.setDifficulty(c.getDifficulty());
         dto.setStartDate(c.getStartDate());
         dto.setEndDate(c.getEndDate());
+        dto.setDaysRemaining(daysRemaining);
         dto.setIsFeatured(c.getIsFeatured());
         dto.setStatus(c.getStatus());
         if (c.getDepartment() != null) {
             dto.setDepartmentName(c.getDepartment().getDepartmentName());
         }
         if (c.getRewardBadgeId() != null) {
-        	dto.setRewardBadgeId(c.getRewardBadgeId());
+            dto.setRewardBadgeId(c.getRewardBadgeId());
         }
         return dto;
     }

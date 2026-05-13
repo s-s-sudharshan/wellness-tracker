@@ -21,6 +21,7 @@ public class ActiveChallengeResponseDTO {
     private Difficulty difficulty;
     private LocalDate startDate;
     private LocalDate endDate;
+    private Integer daysRemaining;   // 0 = ends today, positive = days left; clamped to 0 for past
     private String departmentName;   // null for COMPANY_WIDE, "Engineering" for DEPARTMENT scoped
     private Boolean isFeatured;
     private ChallengeStatus status;

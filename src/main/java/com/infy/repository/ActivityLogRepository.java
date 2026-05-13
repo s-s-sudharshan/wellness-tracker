@@ -169,4 +169,20 @@ public interface ActivityLogRepository extends CrudRepository<ActivityLog, Integ
             @Param("minValue") Double minValue,
             @Param("maxValue") Double maxValue);
     
+    // US 07 - Activity log count per type for the last 30 days.
+    // Used to rank recommended challenges by the user's strongest habits.
+    // Returns rows of [ActivityType, Long count] ordered by count descending so the
+    // most-logged type comes first. activityType ASC is a deterministic tie-breaker
+    // so equal-frequency types always appear in the same order.
+    @Query("SELECT a.activityType, COUNT(a) " +
+           "FROM ActivityLog a " +
+           "WHERE a.user.userId = :userId " +
+           "AND a.activityDate BETWEEN :fromDate AND :toDate " +
+           "GROUP BY a.activityType " +
+           "ORDER BY COUNT(a) DESC, a.activityType ASC")
+    List<Object[]> countActivityFrequencyByUserAndDateRange(
+            @Param("userId") Integer userId,
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate);
+    
 }

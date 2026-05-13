@@ -13,4 +13,8 @@ public class LoginResponseDTO {
 	private Role role;
 	private Integer departmentId;
 	private String departmentName;
+	
+    // JWT Bearer token — set by AuthServiceImpl after successful authentication.
+    // Frontend stores this and sends it as: Authorization: Bearer <token>
+    private String token;
 }
