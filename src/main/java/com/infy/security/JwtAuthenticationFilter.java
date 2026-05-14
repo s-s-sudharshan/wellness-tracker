@@ -21,7 +21,6 @@ import jakarta.servlet.http.HttpServletResponse;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final String BEARER_PREFIX = "Bearer ";
-    private static final String LOGIN_PATH    = "/wellness/login";
 
     @Autowired
     private JwtService jwtService;
@@ -35,24 +34,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain)
             throws ServletException, IOException {
-
-        // Pass OPTIONS through — required for CORS preflight
-        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        // Login endpoint is public
-        if (LOGIN_PATH.equals(request.getServletPath())) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        // Skip if already authenticated
-        if (SecurityContextHolder.getContext().getAuthentication() != null) {
-            filterChain.doFilter(request, response);
-            return;
-        }
 
         String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX)) {
@@ -70,7 +51,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        // DB lookup — required to enforce immediate inactive-user blocking.
+        // DB lookup — enforces immediate inactive-user blocking.
         // A user deactivated after token issuance is rejected here on the next request.
         try {
             UserDetails userDetails = userDetailsService.loadUserByUsername(email);

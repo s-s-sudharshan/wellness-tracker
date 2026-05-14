@@ -51,6 +51,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     .requestMatchers(HttpMethod.POST, "/wellness/login").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/wellness/forgot-password").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/wellness/reset-password").permitAll()
                     .requestMatchers("/wellness/**").authenticated()
                     .anyRequest().denyAll()
             )
