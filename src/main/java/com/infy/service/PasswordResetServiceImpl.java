@@ -15,6 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.infy.dto.ChangePasswordRequestDTO;
 import com.infy.dto.ForgotPasswordRequestDTO;
 import com.infy.dto.ResetPasswordRequestDTO;
 import com.infy.entity.PasswordResetOtp;
@@ -25,7 +26,6 @@ import com.infy.repository.PasswordResetOtpRepository;
 import com.infy.repository.UserRepository;
 
 @Service
-@Transactional
 public class PasswordResetServiceImpl implements PasswordResetService {
 
     private static final Log LOGGER = LogFactory.getLog(PasswordResetServiceImpl.class);
@@ -55,17 +55,20 @@ public class PasswordResetServiceImpl implements PasswordResetService {
     private String fromAddress;
 
     // Step 1 — generate OTP, store hashed, send email.
+    // @Transactional ensures invalidateAllForUser + save are atomic.
+    // If save fails, the invalidation is rolled back — user is never left OTP-less.
     // If the email does not exist or the user is inactive, return silently.
     // This prevents account enumeration — caller always receives the same generic message.
     @Override
+    @Transactional
     public void forgotPassword(ForgotPasswordRequestDTO requestDTO) {
         Optional<User> userOptional = userRepository.findByEmail(requestDTO.getEmail());
 
         if (userOptional.isEmpty()
                 || !UserStatus.ACTIVE.equals(userOptional.get().getStatus())) {
-            // Silently return — do not reveal whether account exists or is inactive
-            LOGGER.info("PasswordResetServiceImpl.forgotPassword: no-op for email="
-                    + requestDTO.getEmail());
+            // Log only a generic event — do not include the submitted email in the log.
+            // Logging the email weakens the privacy goal of the enumeration-resistant response.
+            LOGGER.info("PasswordResetServiceImpl.forgotPassword: no-op — account not found or inactive");
             return;
         }
 
@@ -100,6 +103,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
     // inactive user, expired/used/exhausted OTP, wrong OTP) to avoid leaking
     // account status or existence through the reset flow.
     @Override
+    @Transactional
     public void resetPassword(ResetPasswordRequestDTO requestDTO)
             throws WellnessTrackerException {
 
@@ -160,12 +164,49 @@ public class PasswordResetServiceImpl implements PasswordResetService {
                 + " for userId=" + user.getUserId());
     }
 
+    // Change password — email comes from the JWT subject (set by PasswordResetAPI).
+    // Never accepts userId from the request body — prevents IDOR where any
+    // authenticated user could target another user's account.
+    // Throws INVALID_CURRENT_PASSWORD if the current password does not match.
+    // Throws SAME_PASSWORD if new password is identical to the current password.
+    @Override
+    @Transactional
+    public void changePassword(String email, ChangePasswordRequestDTO requestDTO)
+            throws WellnessTrackerException {
+
+        // Load user by email derived from JWT — not from request body
+        Optional<User> userOptional = userRepository.findByEmail(email);
+        User user = userOptional.orElseThrow(
+                () -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
+
+        if (!UserStatus.ACTIVE.equals(user.getStatus())) {
+            throw new WellnessTrackerException("Service.ACCOUNT_INACTIVE");
+        }
+
+        // Verify current password against stored BCrypt hash
+        if (!passwordEncoder.matches(requestDTO.getCurrentPassword(), user.getPasswordHash())) {
+            throw new WellnessTrackerException("Service.INVALID_CURRENT_PASSWORD");
+        }
+
+        // Prevent setting the same password
+        if (passwordEncoder.matches(requestDTO.getNewPassword(), user.getPasswordHash())) {
+            throw new WellnessTrackerException("Service.SAME_PASSWORD");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(requestDTO.getNewPassword()));
+        userRepository.save(user);
+
+        LOGGER.info("PasswordResetServiceImpl.changePassword: password changed successfully"
+                + " for userId=" + user.getUserId());
+    }
+
     // -------------------------------------------------------------------------
     // Private helpers
     // -------------------------------------------------------------------------
 
     // Generates a zero-padded 6-digit OTP string (000000–999999).
     // Uses SecureRandom — cryptographically strong, not predictable like java.util.Random.
+    // Always returns exactly 6 characters — leading zeros are preserved by String.format.
     private String generateSixDigitOtp() {
         int raw = SECURE_RANDOM.nextInt(1_000_000);
         return String.format("%06d", raw);

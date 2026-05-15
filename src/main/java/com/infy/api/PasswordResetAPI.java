@@ -4,12 +4,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.infy.dto.ChangePasswordRequestDTO;
 import com.infy.dto.ForgotPasswordRequestDTO;
 import com.infy.dto.ResetPasswordRequestDTO;
 import com.infy.exception.WellnessTrackerException;
@@ -47,6 +51,26 @@ public class PasswordResetAPI {
             throws WellnessTrackerException {
         passwordResetService.resetPassword(requestDTO);
         String message = env.getProperty("API.RESET_PASSWORD_SUCCESS");
+        return new ResponseEntity<>(message, HttpStatus.OK);
+    }
+
+    // PUT /wellness/change-password — protected endpoint, JWT required.
+    // The authenticated user is derived from the JWT subject in SecurityContext.
+    // userId is never accepted from the request body — prevents IDOR where any
+    // authenticated user could target another user's account.
+    @PutMapping(value = "/change-password")
+    public ResponseEntity<String> changePassword(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody ChangePasswordRequestDTO requestDTO)
+            throws WellnessTrackerException {
+        // userDetails is guaranteed non-null by Spring Security when the endpoint is
+        // protected, but we guard defensively in case security config changes later.
+        if (userDetails == null) {
+            throw new WellnessTrackerException("Service.UNAUTHORIZED");
+        }
+        // userDetails.getUsername() returns the email set as JWT subject at login
+        passwordResetService.changePassword(userDetails.getUsername(), requestDTO);
+        String message = env.getProperty("API.CHANGE_PASSWORD_SUCCESS");
         return new ResponseEntity<>(message, HttpStatus.OK);
     }
 }
