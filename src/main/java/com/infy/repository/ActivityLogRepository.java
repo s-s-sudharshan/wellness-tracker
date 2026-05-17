@@ -185,4 +185,33 @@ public interface ActivityLogRepository extends CrudRepository<ActivityLog, Integ
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate);
     
+    // US 15 - Per-department per-type aggregates for the department analytics comparison.
+    // Returns [Integer deptId, ActivityType type, Double sum, Long distinctUsers].
+    // activityType filter uses IS NULL OR pattern — null means all types are returned.
+    // distinctUsers is the count of distinct users per department per type in the range,
+    // used to compute avgValue = sum / distinctUsers in the service layer.
+    @Query("SELECT a.user.department.departmentId, " +
+           "       a.activityType, " +
+           "       SUM(a.activityValue), " +
+           "       COUNT(DISTINCT a.user.userId) " +
+           "FROM ActivityLog a " +
+           "WHERE a.activityDate BETWEEN :fromDate AND :toDate " +
+           "AND (:activityType IS NULL OR a.activityType = :activityType) " +
+           "GROUP BY a.user.department.departmentId, a.activityType")
+    List<Object[]> findDepartmentMetricAggregates(
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate,
+            @Param("activityType") ActivityType activityType);
+ 
+    // US 15 - Distinct active participants per department in the date range.
+    // No metricType filter — totalParticipants always reflects overall department
+    // engagement regardless of the metricType filter applied to the main query.
+    // Returns [Integer deptId, Long count].
+    @Query("SELECT a.user.department.departmentId, COUNT(DISTINCT a.user.userId) " +
+           "FROM ActivityLog a " +
+           "WHERE a.activityDate BETWEEN :fromDate AND :toDate " +
+           "GROUP BY a.user.department.departmentId")
+    List<Object[]> findDepartmentParticipantCounts(
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate);
 }

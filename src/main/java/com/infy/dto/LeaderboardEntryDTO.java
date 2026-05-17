@@ -6,6 +6,7 @@ import lombok.Data;
 public class LeaderboardEntryDTO {
 
     private Integer rank;
+    private Integer userId;
     private String participantName;
     private Double actualValue;
     private String unit;

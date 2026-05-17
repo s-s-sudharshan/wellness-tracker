@@ -127,6 +127,7 @@ public class LeaderboardServiceImpl implements LeaderboardService {
             int progressPct    = calcPct(actualValue, challenge.getGoalValue());
 
             LeaderboardEntryDTO entry = new LeaderboardEntryDTO();
+            entry.setUserId(userId);
             entry.setParticipantName(
                     p.getUser().getFirstName() + " " + p.getUser().getLastName());
             entry.setActualValue(actualValue);
