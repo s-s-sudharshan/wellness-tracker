@@ -7,7 +7,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -23,13 +22,14 @@ public class RecommendationAPI {
     @Autowired
     private RecommendationService recommendationService;
 
-    // US 08 - Get personalised wellness recommendations for a user.
-    @GetMapping(value = "/recommendations/users/{userId}")
-    public ResponseEntity<List<RecommendationResponseDTO>> getRecommendations(
-            @PathVariable Integer userId)
+    // US 08 - Get personalised wellness recommendations for the JWT caller.
+    // Path changed from /recommendations/users/{userId} to /recommendations/mine.
+    // userId removed — derived from JWT inside service.
+    @GetMapping(value = "/recommendations/mine")
+    public ResponseEntity<List<RecommendationResponseDTO>> getRecommendations()
             throws WellnessTrackerException {
         List<RecommendationResponseDTO> recommendations =
-                recommendationService.getRecommendations(userId);
+                recommendationService.getRecommendations();
         return new ResponseEntity<>(recommendations, HttpStatus.OK);
     }
 }

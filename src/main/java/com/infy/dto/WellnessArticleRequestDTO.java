@@ -4,15 +4,15 @@ import com.infy.enums.ActivityType;
 import com.infy.enums.WellnessArticleStatus;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
 public class WellnessArticleRequestDTO {
 
-    @NotNull(message = "{article.createdby.absent}")
-    private Integer createdBy;
+    // createdBy intentionally removed — caller identity is derived from JWT.
+    // The service calls authenticatedUserResolver.resolveCurrentUser() instead.
+    // The frontend no longer needs to send the logged-in user's ID in the body.
 
     @NotBlank(message = "{article.title.absent}")
     @Size(max = 150, message = "{article.title.toolong}")

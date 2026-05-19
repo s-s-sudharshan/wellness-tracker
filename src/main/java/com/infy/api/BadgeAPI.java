@@ -33,7 +33,7 @@ public class BadgeAPI {
     @Autowired
     private Environment env;
 
-    // Manager/HR — create a new badge
+    // Manager/HR — create a new badge (role gate on service).
     @PostMapping(value = "/badges")
     public ResponseEntity<String> createBadge(
             @Valid @RequestBody BadgeRequestDTO requestDTO)
@@ -43,7 +43,7 @@ public class BadgeAPI {
         return new ResponseEntity<>(successMessage, HttpStatus.CREATED);
     }
 
-    // Manager/HR — edit an existing badge
+    // Manager/HR — edit an existing badge (role gate on service).
     @PutMapping(value = "/badges/{badgeId}")
     public ResponseEntity<BadgeResponseDTO> updateBadge(
             @PathVariable Integer badgeId,
@@ -53,7 +53,7 @@ public class BadgeAPI {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    // Admin — list all badges with no user context
+    // All authenticated users — list all badges with no user context.
     @GetMapping(value = "/badges")
     public ResponseEntity<List<BadgeResponseDTO>> getAllBadges()
             throws WellnessTrackerException {
@@ -61,14 +61,14 @@ public class BadgeAPI {
         return new ResponseEntity<>(badges, HttpStatus.OK);
     }
 
-    // Employee — get all badges with live progress for a specific user
-    // Returns flat list sorted: EARNED → IN_PROGRESS → LOCKED
-    // newlyUnlocked=true on any badge that was just awarded — use this for toast
-    @GetMapping(value = "/badges/users/{userId}")
-    public ResponseEntity<List<BadgeResponseDTO>> getUserBadges(
-            @PathVariable Integer userId)
+    // JWT caller's own badges with live progress.
+    // Path changed from /badges/users/{userId} to /badges/mine.
+    // Returns flat list sorted: EARNED → IN_PROGRESS → LOCKED.
+    // newlyUnlocked=true on any badge just awarded — use for toast.
+    @GetMapping(value = "/badges/mine")
+    public ResponseEntity<List<BadgeResponseDTO>> getUserBadges()
             throws WellnessTrackerException {
-        List<BadgeResponseDTO> badges = badgeService.getUserBadges(userId);
+        List<BadgeResponseDTO> badges = badgeService.getUserBadges();
         return new ResponseEntity<>(badges, HttpStatus.OK);
     }
 }

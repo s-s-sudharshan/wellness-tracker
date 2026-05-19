@@ -24,21 +24,20 @@ public class DepartmentAnalyticsAPI {
     @Autowired
     private DepartmentAnalyticsService departmentAnalyticsService;
 
-    // US 15 - Department comparison analytics for HR.
-    // requestingUserId is verified against the JWT principal in the service layer.
-    // metricType is accepted as String (not ActivityType enum) to prevent Spring's
+    // US 15 - Department comparison analytics (HR only).
+    // requestingUserId param removed — caller identity derived from JWT inside service.
+    // Role gate: @PreAuthorize("hasRole('HR')") on service interface.
+    // metricType accepted as String (not ActivityType enum) to prevent Spring's
     // enum conversion from producing a 500 via the catch-all ExceptionControllerAdvice.
-    // Invalid metricType values return a 400 with Service.INVALID_METRIC_TYPE message.
-    // fromDate and toDate use ISO date format: yyyy-MM-dd
+    // Invalid metricType values return 400 with Service.INVALID_METRIC_TYPE message.
     @GetMapping(value = "/analytics/departments")
     public ResponseEntity<DepartmentAnalyticsResponseDTO> getDepartmentAnalytics(
-            @RequestParam Integer requestingUserId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) String metricType)
             throws WellnessTrackerException {
         DepartmentAnalyticsResponseDTO response = departmentAnalyticsService
-                .getDepartmentAnalytics(requestingUserId, fromDate, toDate, metricType);
+                .getDepartmentAnalytics(fromDate, toDate, metricType);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

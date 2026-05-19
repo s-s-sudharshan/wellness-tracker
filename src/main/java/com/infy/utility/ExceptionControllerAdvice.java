@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -26,14 +28,37 @@ public class ExceptionControllerAdvice
 
     @Autowired
     private Environment environment;
+    
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErrorInfo> authenticationExceptionHandler(
+            AuthenticationException exception) {
+        LOGGER.warn("AuthenticationException: " + exception.getMessage());
+        ErrorInfo errorInfo = new ErrorInfo();
+        errorInfo.setErrorCode(HttpStatus.UNAUTHORIZED.value());
+        errorInfo.setErrorMessage(
+                environment.getProperty("General.UNAUTHORIZED_MESSAGE"));
+        return new ResponseEntity<>(errorInfo, HttpStatus.UNAUTHORIZED);
+    }
+    
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorInfo> accessDeniedExceptionHandler(
+            AccessDeniedException exception) {
+        LOGGER.warn("AccessDeniedException: " + exception.getMessage());
+        ErrorInfo errorInfo = new ErrorInfo();
+        errorInfo.setErrorCode(HttpStatus.FORBIDDEN.value());
+        errorInfo.setErrorMessage(
+                environment.getProperty("General.ACCESS_DENIED_MESSAGE"));
+        return new ResponseEntity<>(errorInfo, HttpStatus.FORBIDDEN);
+    }
 
     @ExceptionHandler(WellnessTrackerException.class)
-    public ResponseEntity<ErrorInfo> meetingSchedulerExceptionHandler(WellnessTrackerException exception) {
-		LOGGER.error(exception.getMessage(), exception);
-		ErrorInfo errorInfo = new ErrorInfo();
-		errorInfo.setErrorCode(HttpStatus.BAD_REQUEST.value());
-		errorInfo.setErrorMessage(environment.getProperty(exception.getMessage()));
-		return new ResponseEntity<>(errorInfo, HttpStatus.BAD_REQUEST);
+    public ResponseEntity<ErrorInfo> wellnessTrackerExceptionHandler(
+            WellnessTrackerException exception) {
+        LOGGER.error(exception.getMessage(), exception);
+        ErrorInfo errorInfo = new ErrorInfo();
+        errorInfo.setErrorCode(HttpStatus.BAD_REQUEST.value());
+        errorInfo.setErrorMessage(environment.getProperty(exception.getMessage()));
+        return new ResponseEntity<>(errorInfo, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(Exception.class)

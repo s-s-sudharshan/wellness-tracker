@@ -5,7 +5,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -21,12 +20,13 @@ public class DashboardAPI {
     @Autowired
     private DashboardService dashboardService;
 
-    // US 06 - Get aggregated dashboard data for a user
-    @GetMapping(value = "/dashboard/users/{userId}")
-    public ResponseEntity<DashboardResponseDTO> getDashboard(
-            @PathVariable Integer userId)
+    // US 06 - Get aggregated dashboard data for the JWT caller.
+    // Path changed from /dashboard/users/{userId} to /dashboard/mine.
+    // userId removed — derived from JWT inside service.
+    @GetMapping(value = "/dashboard/mine")
+    public ResponseEntity<DashboardResponseDTO> getDashboard()
             throws WellnessTrackerException {
-        DashboardResponseDTO response = dashboardService.getDashboard(userId);
+        DashboardResponseDTO response = dashboardService.getDashboard();
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

@@ -6,8 +6,8 @@ import lombok.Data;
 @Data
 public class JoinChallengeRequestDTO {
 
-    @NotNull(message = "{participant.userid.absent}")
-    private Integer userId;
+    // userId intentionally removed — caller identity is derived from JWT.
+    // The service calls authenticatedUserResolver.resolveCurrentUser() instead.
 
     @NotNull(message = "{participant.challengeid.absent}")
     private Integer challengeId;

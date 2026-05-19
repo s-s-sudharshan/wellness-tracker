@@ -33,8 +33,9 @@ public class WellnessArticleAPI {
     @Autowired
     private Environment env;
 
-    // HR creates a new wellness article (defaults to DRAFT)
-    // Set status = PUBLISHED in the request body to make it immediately live
+    // HR creates a new wellness article (defaults to DRAFT).
+    // Set status = PUBLISHED in the request body to make it immediately live.
+    // Role gate: @PreAuthorize("hasRole('HR')") on service interface.
     @PostMapping(value = "/articles")
     public ResponseEntity<String> createArticle(
             @Valid @RequestBody WellnessArticleRequestDTO requestDTO)
@@ -44,7 +45,7 @@ public class WellnessArticleAPI {
         return new ResponseEntity<>(successMessage, HttpStatus.CREATED);
     }
 
-    // HR updates an existing article (including publishing a draft)
+    // HR updates an existing article (including publishing a draft).
     @PutMapping(value = "/articles/{articleId}")
     public ResponseEntity<WellnessArticleResponseDTO> updateArticle(
             @PathVariable Integer articleId,
@@ -54,12 +55,13 @@ public class WellnessArticleAPI {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    // Get all articles created by a specific HR user (both DRAFT and PUBLISHED)
-    @GetMapping(value = "/articles/hr/{userId}")
-    public ResponseEntity<List<WellnessArticleResponseDTO>> getArticlesByHr(
-            @PathVariable Integer userId)
+    // Get all articles created by the JWT caller (HR only).
+    // Path changed from /articles/hr/{userId} to /articles/mine.
+    // userId removed — derived from JWT inside service.
+    @GetMapping(value = "/articles/mine")
+    public ResponseEntity<List<WellnessArticleResponseDTO>> getArticlesByHr()
             throws WellnessTrackerException {
-        List<WellnessArticleResponseDTO> articles = articleService.getArticlesByHr(userId);
+        List<WellnessArticleResponseDTO> articles = articleService.getArticlesByHr();
         return new ResponseEntity<>(articles, HttpStatus.OK);
     }
 }

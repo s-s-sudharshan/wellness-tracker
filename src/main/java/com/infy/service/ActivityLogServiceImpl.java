@@ -25,6 +25,7 @@ import com.infy.enums.ActivityType;
 import com.infy.exception.WellnessTrackerException;
 import com.infy.repository.ActivityLogRepository;
 import com.infy.repository.UserRepository;
+import com.infy.security.AuthenticatedUserResolver;
 
 @Service
 @Transactional
@@ -36,15 +37,17 @@ public class ActivityLogServiceImpl implements ActivityLogService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private AuthenticatedUserResolver authenticatedUserResolver;
+
     @Override
     public Integer createActivityLog(ActivityLogRequestDTO requestDTO)
             throws WellnessTrackerException {
-        Optional<User> optional = userRepository.findById(requestDTO.getUserId());
-        User user = optional.orElseThrow(
-                () -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
+        // Identity derived from JWT — never from request body
+        User caller = authenticatedUserResolver.resolveCurrentUser();
 
         ActivityLog activityLog = new ActivityLog();
-        activityLog.setUser(user);
+        activityLog.setUser(caller);
         activityLog.setActivityType(requestDTO.getActivityType());
         activityLog.setActivityDate(requestDTO.getActivityDate());
         activityLog.setActivityValue(requestDTO.getActivityValue());
@@ -53,15 +56,15 @@ public class ActivityLogServiceImpl implements ActivityLogService {
         return activityLogRepository.save(activityLog).getActivityLogId();
     }
 
-    // US 01 - Update an existing activity log.
-    // Ownership is enforced at DB level — findByActivityLogIdAndUser_UserId returns
-    // empty if the log does not belong to the requesting user.
+    // Ownership enforced at DB level — findByActivityLogIdAndUser_UserId returns
+    // empty if the log does not belong to the JWT caller.
     @Override
     public ActivityLogResponseDTO updateActivityLog(Integer activityLogId,
             ActivityLogRequestDTO requestDTO) throws WellnessTrackerException {
+        Integer callerId = authenticatedUserResolver.resolveCurrentUserId();
 
         Optional<ActivityLog> optional = activityLogRepository
-                .findByActivityLogIdAndUser_UserId(activityLogId, requestDTO.getUserId());
+                .findByActivityLogIdAndUser_UserId(activityLogId, callerId);
         ActivityLog activityLog = optional.orElseThrow(
                 () -> new WellnessTrackerException("Service.ACTIVITY_LOG_NOT_FOUND"));
 
@@ -74,14 +77,13 @@ public class ActivityLogServiceImpl implements ActivityLogService {
         return mapToDTO(activityLogRepository.save(activityLog));
     }
 
-    // US 01 - Delete an activity log.
-    // userId passed separately (query param on DELETE) to enforce ownership.
+    // Ownership enforced at DB level — same pattern as update.
     @Override
-    public void deleteActivityLog(Integer activityLogId, Integer userId)
-            throws WellnessTrackerException {
+    public void deleteActivityLog(Integer activityLogId) throws WellnessTrackerException {
+        Integer callerId = authenticatedUserResolver.resolveCurrentUserId();
 
         Optional<ActivityLog> optional = activityLogRepository
-                .findByActivityLogIdAndUser_UserId(activityLogId, userId);
+                .findByActivityLogIdAndUser_UserId(activityLogId, callerId);
         optional.orElseThrow(
                 () -> new WellnessTrackerException("Service.ACTIVITY_LOG_NOT_FOUND"));
 
@@ -90,14 +92,11 @@ public class ActivityLogServiceImpl implements ActivityLogService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ActivityLogResponseDTO> getActivityHistory(Integer userId)
-            throws WellnessTrackerException {
-        if (!userRepository.existsById(userId)) {
-            throw new WellnessTrackerException("Service.USER_NOT_FOUND");
-        }
+    public List<ActivityLogResponseDTO> getActivityHistory() throws WellnessTrackerException {
+        Integer callerId = authenticatedUserResolver.resolveCurrentUserId();
 
         List<ActivityLog> logs = activityLogRepository
-                .findByUser_UserIdOrderByActivityDateDescCreatedAtDesc(userId);
+                .findByUser_UserIdOrderByActivityDateDescCreatedAtDesc(callerId);
 
         if (logs.isEmpty()) {
             throw new WellnessTrackerException("Service.NO_ACTIVITY_FOUND");
@@ -110,6 +109,8 @@ public class ActivityLogServiceImpl implements ActivityLogService {
         return responseList;
     }
 
+    // Manager/HR viewing a target user's summary — userId is the TARGET, not caller.
+    // @PreAuthorize("hasRole('MANAGER') or hasRole('HR')") enforces role gate.
     @Override
     @Transactional(readOnly = true)
     public ActivitySummaryDTO getActivitySummary(Integer userId, LocalDate fromDate,
@@ -146,8 +147,7 @@ public class ActivityLogServiceImpl implements ActivityLogService {
         return summaryDTO;
     }
 
-    // US 02 - Returns [] on empty — not an error for a chart/time-series endpoint.
-    // If metricType is null, all types are returned. If provided, filtered in Java.
+    // Manager/HR viewing a target user's trend — userId is the TARGET, not caller.
     @Override
     @Transactional(readOnly = true)
     public List<ActivityTrendPointDTO> getActivityTrend(Integer userId, LocalDate fromDate,
@@ -179,72 +179,60 @@ public class ActivityLogServiceImpl implements ActivityLogService {
         return result;
     }
 
-    // US 09 - Filtered and sorted activity history.
-    // Returns [] on empty — consistent with chart/list endpoint rule.
-    // Differs from getActivityHistory() which throws NO_ACTIVITY_FOUND when empty.
-    // sortBy="amount" maps to activityValue field; any other value defaults to date.
+    // JWT caller's own filtered history — userId derived internally.
     @Override
     @Transactional(readOnly = true)
     public List<ActivityLogResponseDTO> getFilteredActivityHistory(
-            Integer userId,
             LocalDate fromDate,
             LocalDate toDate,
             ActivityType activityType,
             Double minValue,
             Double maxValue,
             String sortBy) throws WellnessTrackerException {
- 
-        if (!userRepository.existsById(userId)) {
-            throw new WellnessTrackerException("Service.USER_NOT_FOUND");
-        }
- 
+
+        Integer callerId = authenticatedUserResolver.resolveCurrentUserId();
+
         if (fromDate != null && toDate != null && fromDate.isAfter(toDate)) {
             throw new WellnessTrackerException("Service.INVALID_DATE_RANGE");
         }
- 
+
         if (minValue != null && maxValue != null && minValue > maxValue) {
             throw new WellnessTrackerException("Service.INVALID_VALUE_RANGE");
         }
- 
+
         List<ActivityLog> logs = "amount".equalsIgnoreCase(sortBy)
                 ? activityLogRepository.findFilteredSortByAmount(
-                        userId, fromDate, toDate, activityType, minValue, maxValue)
+                        callerId, fromDate, toDate, activityType, minValue, maxValue)
                 : activityLogRepository.findFilteredSortByDate(
-                        userId, fromDate, toDate, activityType, minValue, maxValue);
- 
+                        callerId, fromDate, toDate, activityType, minValue, maxValue);
+
         List<ActivityLogResponseDTO> responseList = new ArrayList<>();
         for (ActivityLog log : logs) {
             responseList.add(mapToDTO(log));
         }
         return responseList;
     }
- 
-    // US 09 - Export filtered activity history as a UTF-8 CSV byte array.
-    // Uses the same filters and sort logic as getFilteredActivityHistory.
-    // The caller (ActivityLogAPI) sets the Content-Disposition and Content-Type headers.
+
+    // JWT caller's own export — userId derived internally.
     @Override
     @Transactional(readOnly = true)
     public byte[] exportActivityHistoryCsv(
-            Integer userId,
             LocalDate fromDate,
             LocalDate toDate,
             ActivityType activityType,
             Double minValue,
             Double maxValue,
             String sortBy) throws WellnessTrackerException {
- 
-        // Reuse filter validation and data fetch from the search method
+
         List<ActivityLogResponseDTO> data = getFilteredActivityHistory(
-                userId, fromDate, toDate, activityType, minValue, maxValue, sortBy);
- 
+                fromDate, toDate, activityType, minValue, maxValue, sortBy);
+
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (PrintWriter writer = new PrintWriter(
                 new OutputStreamWriter(out, StandardCharsets.UTF_8))) {
-            // Header row
             writer.println("Activity Log ID,User ID,User Name,Activity Type," +
                            "Activity Date,Activity Value,Unit,Notes,Created At");
- 
-            // Data rows — quote fields that may contain commas (notes, user name)
+
             for (ActivityLogResponseDTO dto : data) {
                 writer.printf(Locale.US, "%d,%d,\"%s\",%s,%s,%.2f,\"%s\",\"%s\",%s%n",
                         dto.getActivityLogId(),
@@ -258,17 +246,15 @@ public class ActivityLogServiceImpl implements ActivityLogService {
                         dto.getCreatedAt());
             }
         }
- 
+
         return out.toByteArray();
     }
- 
-    // Escapes double quotes inside a CSV field value by doubling them.
+
     private String escapeCsv(String value) {
         if (value == null) return "";
         return value.replace("\"", "\"\"");
     }
- 
-    // Shared mapping used by create, update, get history, and filtered search
+
     private ActivityLogResponseDTO mapToDTO(ActivityLog log) {
         ActivityLogResponseDTO dto = new ActivityLogResponseDTO();
         dto.setActivityLogId(log.getActivityLogId());

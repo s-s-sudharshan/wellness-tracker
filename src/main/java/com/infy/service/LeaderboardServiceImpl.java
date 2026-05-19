@@ -24,6 +24,7 @@ import com.infy.repository.ActivityLogRepository;
 import com.infy.repository.ChallengeParticipantRepository;
 import com.infy.repository.ChallengeRepository;
 import com.infy.repository.UserRepository;
+import com.infy.security.AuthenticatedUserResolver;
 
 @Service
 @Transactional
@@ -44,26 +45,30 @@ public class LeaderboardServiceImpl implements LeaderboardService {
     @Autowired
     public ChallengeStatusSyncService statusSyncService;
 
+    @Autowired
+    private AuthenticatedUserResolver authenticatedUserResolver;
+
+    // requestingUserId derived from JWT — not supplied by client.
     @Override
-    public LeaderboardResponseDTO getLeaderboard(Integer challengeId, Integer requestingUserId)
+    public LeaderboardResponseDTO getLeaderboard(Integer challengeId)
             throws WellnessTrackerException {
 
         statusSyncService.syncStatuses();
+
+        // Derive caller identity from JWT
+        User caller = authenticatedUserResolver.resolveCurrentUser();
+        Integer requestingUserId = caller.getUserId();
 
         Optional<Challenge> challengeOptional = challengeRepository.findById(challengeId);
         Challenge challenge = challengeOptional.orElseThrow(
                 () -> new WellnessTrackerException("Service.CHALLENGE_NOT_FOUND"));
 
-        Optional<User> userOptional = userRepository.findById(requestingUserId);
-        User requestingUser = userOptional.orElseThrow(
-                () -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
-
         // DEPARTMENT challenge: same-dept OR creator OR existing participant
         if (challenge.getVisibilityType().equals(VisibilityType.DEPARTMENT)) {
             Integer challengeDeptId = challenge.getDepartment() != null
                     ? challenge.getDepartment().getDepartmentId() : null;
-            Integer userDeptId = requestingUser.getDepartment() != null
-                    ? requestingUser.getDepartment().getDepartmentId() : null;
+            Integer userDeptId = caller.getDepartment() != null
+                    ? caller.getDepartment().getDepartmentId() : null;
 
             boolean inSameDepartment = challengeDeptId != null
                     && challengeDeptId.equals(userDeptId);
@@ -84,8 +89,6 @@ public class LeaderboardServiceImpl implements LeaderboardService {
             throw new WellnessTrackerException("Service.NO_PARTICIPANTS_FOUND");
         }
 
-        // Determine effective date range for activity calculation.
-        // UPCOMING: toDate ends up before fromDate — clamp equal so query returns nothing.
         LocalDate today = LocalDate.now();
         LocalDate fromDate = challenge.getStartDate();
         LocalDate toDate = challenge.getEndDate().isAfter(today)
@@ -95,13 +98,11 @@ public class LeaderboardServiceImpl implements LeaderboardService {
             toDate = fromDate;
         }
 
-        // Collect all participant user IDs
         List<Integer> participantUserIds = new ArrayList<>();
         for (ChallengeParticipant p : participants) {
             participantUserIds.add(p.getUser().getUserId());
         }
 
-        // Single batch query — all participant actuals in one DB call
         List<Object[]> allActuals = activityLogRepository
                 .findActualsByUsersAndDateRangeAndType(
                         participantUserIds,
@@ -109,7 +110,6 @@ public class LeaderboardServiceImpl implements LeaderboardService {
                         fromDate,
                         toDate);
 
-        // Build userId -> totalValue map for O(1) lookup
         Map<Integer, Double> actualByUser = new HashMap<>();
         for (Object[] row : allActuals) {
             Integer userId = ((Number) row[0]).intValue();
@@ -119,7 +119,6 @@ public class LeaderboardServiceImpl implements LeaderboardService {
 
         String unit = resolveUnit(challenge.getMetricType());
 
-        // Build unsorted entry list
         List<LeaderboardEntryDTO> entries = new ArrayList<>();
         for (ChallengeParticipant p : participants) {
             Integer userId     = p.getUser().getUserId();
@@ -144,7 +143,7 @@ public class LeaderboardServiceImpl implements LeaderboardService {
             return a.getParticipantName().compareTo(b.getParticipantName());
         });
 
-        // Standard competition ranking — ties share the same rank, next rank skips
+        // Standard competition ranking
         int rank = 1;
         for (int i = 0; i < entries.size(); i++) {
             if (i == 0) {
@@ -159,7 +158,6 @@ public class LeaderboardServiceImpl implements LeaderboardService {
             }
         }
 
-        // Extract requesting user's stats from the ranked list
         Integer currentUserRank        = null;
         Double  currentUserValue       = 0.0;
         Integer currentUserProgressPct = 0;
@@ -173,7 +171,6 @@ public class LeaderboardServiceImpl implements LeaderboardService {
             }
         }
 
-        // Clamp daysRemaining to 0 for completed/past-end challenges
         long rawDaysRemaining = ChronoUnit.DAYS.between(today, challenge.getEndDate());
         int daysRemaining = (int) Math.max(0, rawDaysRemaining);
 

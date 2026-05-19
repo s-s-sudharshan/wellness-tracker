@@ -12,9 +12,6 @@ import lombok.Data;
 @Data
 public class MoodLogRequestDTO {
 
-	@NotNull(message = "{moodlog.userid.absent}")
-	private Integer userId;
- 
 	@NotNull(message = "{moodlog.logdate.absent}")
 	@PastOrPresent(message = "{moodlog.logdate.invalid}")
 	private LocalDate logDate;

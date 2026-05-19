@@ -13,9 +13,6 @@ import lombok.Data;
 
 @Data
 public class ActivityLogRequestDTO {
-	
-	@NotNull(message = "{activity.userid.absent}")
-	private Integer userId;
  
 	@NotNull(message = "{activity.type.absent}")
 	private ActivityType activityType;

@@ -8,8 +8,6 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,6 +28,7 @@ import com.infy.repository.ActivityLogRepository;
 import com.infy.repository.BulkUploadRepository;
 import com.infy.repository.DepartmentRepository;
 import com.infy.repository.UserRepository;
+import com.infy.security.AuthenticatedUserResolver;
 
 @Service
 public class BulkUploadServiceImpl implements BulkUploadService {
@@ -49,77 +48,32 @@ public class BulkUploadServiceImpl implements BulkUploadService {
     @Autowired
     private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
-    // -------------------------------------------------------------------------
-    // Derives the authenticated user's email from the SecurityContext.
-    // Throws Service.UNAUTHORIZED if no principal is present.
-    // -------------------------------------------------------------------------
-    private String getAuthenticatedEmail() throws WellnessTrackerException {
-        Authentication authentication =
-                SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()
-                || "anonymousUser".equals(authentication.getPrincipal())) {
-            throw new WellnessTrackerException("Service.UNAUTHORIZED");
-        }
-        return authentication.getName(); // JWT subject — the user's email
-    }
-
-    // -------------------------------------------------------------------------
-    // Loads the user for the supplied ID, verifies their email matches the JWT
-    // principal, and confirms they are HR.
-    // Throws Service.UNAUTHORIZED if the JWT email does not match the supplied ID.
-    // Throws Service.NOT_HR if the user is not HR.
-    // -------------------------------------------------------------------------
-    private User resolveAuthenticatedHrUser(Integer suppliedUserId)
-            throws WellnessTrackerException {
-        String authenticatedEmail = getAuthenticatedEmail();
-
-        Optional<User> userOptional = userRepository.findById(suppliedUserId);
-        User user = userOptional.orElseThrow(
-                () -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
-
-        // JWT principal must match the supplied ID — prevents any authenticated
-        // user from passing a different HR user's ID to bypass the role check.
-        if (!authenticatedEmail.equals(user.getEmail())) {
-            throw new WellnessTrackerException("Service.UNAUTHORIZED");
-        }
-
-        if (!Role.HR.equals(user.getRole())) {
-            throw new WellnessTrackerException("Service.NOT_HR");
-        }
-
-        return user;
-    }
+    @Autowired
+    private AuthenticatedUserResolver authenticatedUserResolver;
 
     // -------------------------------------------------------------------------
     // US 14 - Upload and process a CSV file.
     //
+    // Caller identity derived from JWT via AuthenticatedUserResolver.
+    // @PreAuthorize("hasRole('HR')") on interface enforces role gate before entry.
+    //
     // The upload is processed in one transaction. Valid rows are saved if the
     // upload completes without an unrecoverable IO error.
-    //
-    // Header validation:
-    //   Row 1 is compared exactly against the expected header for the upload
-    //   type. A mismatch marks the upload FAILED and returns immediately —
-    //   no data rows are processed.
-    //
-    // Column count:
-    //   EMPLOYEE        — exactly 8 columns per data row.
-    //   BASELINE_METRIC — exactly 6 columns per data row.
-    //   notes may be blank but the column must be present.
-    //
-    // Row processing:
-    //   Each row is validated independently. Invalid rows are skipped and added
-    //   to the errors list. Valid rows are saved. Processing continues regardless
-    //   of row failures.
     // -------------------------------------------------------------------------
     @Override
     @Transactional
-    public BulkUploadResultDTO uploadCsv(Integer uploadedBy, String uploadType,
-            MultipartFile file) throws WellnessTrackerException {
+    public BulkUploadResultDTO uploadCsv(String uploadType, MultipartFile file)
+            throws WellnessTrackerException {
 
-        // 1. Authenticate and authorise
-        User uploader = resolveAuthenticatedHrUser(uploadedBy);
+        // Identity derived from JWT — uploadedBy param removed from signature
+        User uploader = authenticatedUserResolver.resolveCurrentUser();
 
-        // 2. Validate uploadType
+        // Defence-in-depth role check (@PreAuthorize already enforced HR)
+        if (!Role.HR.equals(uploader.getRole())) {
+            throw new WellnessTrackerException("Service.NOT_HR");
+        }
+
+        // Validate uploadType
         BulkUploadType uploadTypeEnum;
         try {
             uploadTypeEnum = BulkUploadType.valueOf(uploadType.toUpperCase());
@@ -127,7 +81,7 @@ public class BulkUploadServiceImpl implements BulkUploadService {
             throw new WellnessTrackerException("Service.INVALID_UPLOAD_TYPE");
         }
 
-        // 3. Validate file
+        // Validate file
         if (file == null || file.isEmpty()) {
             throw new WellnessTrackerException("Service.INVALID_CSV_FILE");
         }
@@ -137,7 +91,7 @@ public class BulkUploadServiceImpl implements BulkUploadService {
             throw new WellnessTrackerException("Service.INVALID_CSV_FILE");
         }
 
-        // 4. Persist upload record with PROCESSING status
+        // Persist upload record with PROCESSING status
         BulkUpload bulkUpload = new BulkUpload();
         bulkUpload.setUploadedBy(uploader);
         bulkUpload.setUploadType(uploadTypeEnum.name());
@@ -145,7 +99,7 @@ public class BulkUploadServiceImpl implements BulkUploadService {
         bulkUpload.setStatus(BulkUploadStatus.PROCESSING.name());
         bulkUpload = bulkUploadRepository.save(bulkUpload);
 
-        // 5. Expected header strings (case-sensitive, trimmed)
+        // Expected header strings (case-sensitive, trimmed)
         String expectedHeader = BulkUploadType.EMPLOYEE.equals(uploadTypeEnum)
                 ? "firstName,lastName,email,password,role,departmentId,managerId,status"
                 : "userId,activityType,activityDate,activityValue,unit,notes";
@@ -168,7 +122,6 @@ public class BulkUploadServiceImpl implements BulkUploadService {
                 // Row 1 — validate header exactly
                 if (lineNumber == 1) {
                     if (!expectedHeader.equals(line.trim())) {
-                        // Invalid header — fail the entire file, return immediately
                         bulkUpload.setStatus(BulkUploadStatus.FAILED.name());
                         bulkUpload.setTotalRows(0);
                         bulkUpload.setSuccessRows(0);
@@ -192,7 +145,6 @@ public class BulkUploadServiceImpl implements BulkUploadService {
                     continue;
                 }
 
-                // Skip completely blank lines
                 if (line.isBlank()) {
                     continue;
                 }
@@ -229,7 +181,7 @@ public class BulkUploadServiceImpl implements BulkUploadService {
             throw new WellnessTrackerException("General.EXCEPTION_MESSAGE");
         }
 
-        // 6. Determine final status
+        // Determine final status
         String finalStatus;
         if (failedRows == 0) {
             finalStatus = BulkUploadStatus.COMPLETED.name();
@@ -239,14 +191,12 @@ public class BulkUploadServiceImpl implements BulkUploadService {
             finalStatus = BulkUploadStatus.FAILED.name();
         }
 
-        // 7. Update BulkUpload record with final counts
         bulkUpload.setStatus(finalStatus);
         bulkUpload.setTotalRows(totalRows);
         bulkUpload.setSuccessRows(importedRows + updatedRows);
         bulkUpload.setFailedRows(failedRows);
         bulkUploadRepository.save(bulkUpload);
 
-        // 8. Build and return result DTO
         BulkUploadResultDTO result = new BulkUploadResultDTO();
         result.setBulkUploadId(bulkUpload.getBulkUploadId());
         result.setFileName(originalFilename);
@@ -262,20 +212,16 @@ public class BulkUploadServiceImpl implements BulkUploadService {
     }
 
     // -------------------------------------------------------------------------
-    // US 14 - Import history for a specific HR user, newest first.
-    // Authenticated email must match the supplied userId.
+    // US 14 - Import history for the JWT caller, newest first.
     // Returns [] when no uploads exist — not an error (admin list rule).
     // -------------------------------------------------------------------------
     @Override
     @Transactional(readOnly = true)
-    public List<BulkUploadResponseDTO> getUploadHistory(Integer userId)
-            throws WellnessTrackerException {
-
-        User user = resolveAuthenticatedHrUser(userId);
+    public List<BulkUploadResponseDTO> getUploadHistory() throws WellnessTrackerException {
+        Integer callerId = authenticatedUserResolver.resolveCurrentUserId();
 
         List<BulkUpload> uploads =
-                bulkUploadRepository.findByUploadedBy_UserIdOrderByUploadedAtDesc(
-                        user.getUserId());
+                bulkUploadRepository.findByUploadedBy_UserIdOrderByUploadedAtDesc(callerId);
 
         List<BulkUploadResponseDTO> response = new ArrayList<>();
         for (BulkUpload upload : uploads) {
@@ -286,23 +232,20 @@ public class BulkUploadServiceImpl implements BulkUploadService {
 
     // -------------------------------------------------------------------------
     // US 14 - Single upload record detail (ownership-guarded).
-    // Authenticated email must match the supplied requestingUserId.
-    // Returns summary only — row-level errors are not stored.
+    // Ownership: the upload record must belong to the JWT caller.
     // -------------------------------------------------------------------------
     @Override
     @Transactional(readOnly = true)
-    public BulkUploadResponseDTO getUploadById(Integer bulkUploadId,
-            Integer requestingUserId) throws WellnessTrackerException {
+    public BulkUploadResponseDTO getUploadById(Integer bulkUploadId)
+            throws WellnessTrackerException {
+        Integer callerId = authenticatedUserResolver.resolveCurrentUserId();
 
-        User requestingUser = resolveAuthenticatedHrUser(requestingUserId);
-
-        Optional<BulkUpload> uploadOptional =
-                bulkUploadRepository.findById(bulkUploadId);
+        Optional<BulkUpload> uploadOptional = bulkUploadRepository.findById(bulkUploadId);
         BulkUpload upload = uploadOptional.orElseThrow(
                 () -> new WellnessTrackerException("Service.BULK_UPLOAD_NOT_FOUND"));
 
         // Ownership guard — HR user can only view their own upload records
-        if (!upload.getUploadedBy().getUserId().equals(requestingUser.getUserId())) {
+        if (!upload.getUploadedBy().getUserId().equals(callerId)) {
             throw new WellnessTrackerException("Service.BULK_UPLOAD_ACCESS_DENIED");
         }
 
@@ -310,20 +253,11 @@ public class BulkUploadServiceImpl implements BulkUploadService {
     }
 
     // -------------------------------------------------------------------------
-    // EMPLOYEE row processor
-    //
-    // Expected columns (0-indexed, exactly 8):
-    //   0=firstName, 1=lastName, 2=email, 3=password,
-    //   4=role, 5=departmentId, 6=managerId, 7=status
-    //
-    // Upsert by email:
-    //   Found     → update fields; blank password = keep existing hash.
-    //   Not found → create new user; password required.
+    // EMPLOYEE row processor — exactly 8 columns required
     // -------------------------------------------------------------------------
     private RowResult processEmployeeRow(int lineNumber, String[] cols) {
         String prefix = "Row " + lineNumber + ": ";
 
-        // Exact column count — extra or missing columns are both rejected
         if (cols.length != 8) {
             return RowResult.fail(prefix + "expected exactly 8 columns "
                     + "(firstName,lastName,email,password,role,departmentId,managerId,status)"
@@ -339,7 +273,6 @@ public class BulkUploadServiceImpl implements BulkUploadService {
         String managerIdStr = cols[6].trim();
         String statusStr    = cols[7].trim();
 
-        // Required field presence checks
         if (firstName.isEmpty()) return RowResult.fail(prefix + "firstName is required.");
         if (lastName.isEmpty())  return RowResult.fail(prefix + "lastName is required.");
         if (email.isEmpty())     return RowResult.fail(prefix + "email is required.");
@@ -347,7 +280,6 @@ public class BulkUploadServiceImpl implements BulkUploadService {
         if (deptIdStr.isEmpty()) return RowResult.fail(prefix + "departmentId is required.");
         if (statusStr.isEmpty()) return RowResult.fail(prefix + "status is required.");
 
-        // Role validation
         Role role;
         try {
             role = Role.valueOf(roleStr.toUpperCase());
@@ -356,7 +288,6 @@ public class BulkUploadServiceImpl implements BulkUploadService {
                     + "' is invalid. Valid values: EMPLOYEE, MANAGER, HR.");
         }
 
-        // UserStatus validation
         UserStatus userStatus;
         try {
             userStatus = UserStatus.valueOf(statusStr.toUpperCase());
@@ -365,7 +296,6 @@ public class BulkUploadServiceImpl implements BulkUploadService {
                     + "' is invalid. Valid values: ACTIVE, INACTIVE.");
         }
 
-        // Department validation
         Integer departmentId;
         try {
             departmentId = Integer.parseInt(deptIdStr);
@@ -380,7 +310,6 @@ public class BulkUploadServiceImpl implements BulkUploadService {
         }
         Department department = deptOptional.get();
 
-        // Manager validation (optional — blank is allowed)
         User manager = null;
         if (!managerIdStr.isEmpty()) {
             Integer managerId;
@@ -398,11 +327,9 @@ public class BulkUploadServiceImpl implements BulkUploadService {
             manager = managerOptional.get();
         }
 
-        // Upsert by email
         Optional<User> existingOptional = userRepository.findByEmail(email);
 
         if (existingOptional.isPresent()) {
-            // UPDATE path
             User existing = existingOptional.get();
             existing.setFirstName(firstName);
             existing.setLastName(lastName);
@@ -410,15 +337,12 @@ public class BulkUploadServiceImpl implements BulkUploadService {
             existing.setDepartment(department);
             existing.setManager(manager);
             existing.setStatus(userStatus);
-            // Blank password on update = keep existing hash; non-blank = encode and update
             if (!password.isEmpty()) {
                 existing.setPasswordHash(passwordEncoder.encode(password));
             }
             userRepository.save(existing);
             return RowResult.update();
-
         } else {
-            // CREATE path — password required for new users
             if (password.isEmpty()) {
                 return RowResult.fail(prefix
                         + "password is required when creating a new user.");
@@ -438,18 +362,11 @@ public class BulkUploadServiceImpl implements BulkUploadService {
     }
 
     // -------------------------------------------------------------------------
-    // BASELINE_METRIC row processor
-    //
-    // Expected columns (0-indexed, exactly 6):
-    //   0=userId, 1=activityType, 2=activityDate, 3=activityValue, 4=unit, 5=notes
-    //
-    // notes (col 5) may be blank but the column must be present.
-    // Always inserts a new ActivityLog row — no upsert.
+    // BASELINE_METRIC row processor — exactly 6 columns required
     // -------------------------------------------------------------------------
     private RowResult processBaselineMetricRow(int lineNumber, String[] cols) {
         String prefix = "Row " + lineNumber + ": ";
 
-        // Exact column count enforced
         if (cols.length != 6) {
             return RowResult.fail(prefix + "expected exactly 6 columns "
                     + "(userId,activityType,activityDate,activityValue,unit,notes)"
@@ -463,14 +380,12 @@ public class BulkUploadServiceImpl implements BulkUploadService {
         String unit            = cols[4].trim();
         String notes           = cols[5].trim();
 
-        // Required field presence checks (notes is optional — blank allowed)
         if (userIdStr.isEmpty())       return RowResult.fail(prefix + "userId is required.");
         if (activityTypeStr.isEmpty()) return RowResult.fail(prefix + "activityType is required.");
         if (activityDateStr.isEmpty()) return RowResult.fail(prefix + "activityDate is required.");
         if (activityValStr.isEmpty())  return RowResult.fail(prefix + "activityValue is required.");
         if (unit.isEmpty())            return RowResult.fail(prefix + "unit is required.");
 
-        // userId validation
         Integer userId;
         try {
             userId = Integer.parseInt(userIdStr);
@@ -484,7 +399,6 @@ public class BulkUploadServiceImpl implements BulkUploadService {
         }
         User user = userOptional.get();
 
-        // activityType validation
         ActivityType activityType;
         try {
             activityType = ActivityType.valueOf(activityTypeStr.toUpperCase());
@@ -493,7 +407,6 @@ public class BulkUploadServiceImpl implements BulkUploadService {
                     + "' is invalid. Valid values: STEPS, WORKOUT, MEDITATION, WATER, SLEEP, OTHER.");
         }
 
-        // activityDate validation
         java.time.LocalDate activityDate;
         try {
             activityDate = java.time.LocalDate.parse(activityDateStr);
@@ -502,7 +415,6 @@ public class BulkUploadServiceImpl implements BulkUploadService {
                     + "' is not a valid date. Expected format: yyyy-MM-dd.");
         }
 
-        // activityValue validation
         double activityValue;
         try {
             activityValue = Double.parseDouble(activityValStr);
@@ -514,7 +426,6 @@ public class BulkUploadServiceImpl implements BulkUploadService {
             return RowResult.fail(prefix + "activityValue must be greater than 0.");
         }
 
-        // Insert new ActivityLog row
         ActivityLog log = new ActivityLog();
         log.setUser(user);
         log.setActivityType(activityType);
@@ -527,9 +438,6 @@ public class BulkUploadServiceImpl implements BulkUploadService {
         return RowResult.create();
     }
 
-    // -------------------------------------------------------------------------
-    // Private helper
-    // -------------------------------------------------------------------------
     private BulkUploadResponseDTO mapToResponseDTO(BulkUpload upload) {
         BulkUploadResponseDTO dto = new BulkUploadResponseDTO();
         dto.setBulkUploadId(upload.getBulkUploadId());
@@ -547,11 +455,6 @@ public class BulkUploadServiceImpl implements BulkUploadService {
         return dto;
     }
 
-    // -------------------------------------------------------------------------
-    // RowResult — value object carrying success/failure state for one CSV row.
-    // Avoids throwing exceptions inside the row loop so one bad row never
-    // stops the rest of the file from being processed.
-    // -------------------------------------------------------------------------
     private static class RowResult {
         final boolean success;
         final boolean wasUpdate;

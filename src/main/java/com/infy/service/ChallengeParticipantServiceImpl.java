@@ -29,7 +29,7 @@ import com.infy.repository.ActivityLogRepository;
 import com.infy.repository.ChallengeParticipantRepository;
 import com.infy.repository.ChallengeRepository;
 import com.infy.repository.NotificationRepository;
-import com.infy.repository.UserRepository;
+import com.infy.security.AuthenticatedUserResolver;
 
 @Service
 @Transactional
@@ -40,9 +40,6 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
 
     @Autowired
     private ChallengeRepository challengeRepository;
-
-    @Autowired
-    private UserRepository userRepository;
 
     @Autowired
     private ActivityLogRepository activityLogRepository;
@@ -56,22 +53,22 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
     @Autowired
     private NotificationService notificationService;
 
-    // US 03 - Join challenge
-    // US 10 - Sends a confirmation notification to the joining user
+    @Autowired
+    private AuthenticatedUserResolver authenticatedUserResolver;
+
+    // US 03 - Join challenge.
+    // Caller identity derived from JWT — userId removed from JoinChallengeRequestDTO.
     @Override
     public Integer joinChallenge(JoinChallengeRequestDTO requestDTO)
             throws WellnessTrackerException {
 
-        Optional<User> userOptional = userRepository.findById(requestDTO.getUserId());
-        User user = userOptional.orElseThrow(
-                () -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
+        User caller = authenticatedUserResolver.resolveCurrentUser();
 
         Optional<Challenge> challengeOptional = challengeRepository.findById(
                 requestDTO.getChallengeId());
         Challenge challenge = challengeOptional.orElseThrow(
                 () -> new WellnessTrackerException("Service.CHALLENGE_NOT_FOUND"));
 
-        // Date-based guard catches stale status where endDate has passed
         if (LocalDate.now().isAfter(challenge.getEndDate())
                 || challenge.getStatus().equals(ChallengeStatus.COMPLETED)) {
             throw new WellnessTrackerException("Service.CHALLENGE_ALREADY_COMPLETED");
@@ -81,38 +78,34 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
         if (challenge.getVisibilityType().equals(VisibilityType.DEPARTMENT)) {
             Integer challengeDeptId = challenge.getDepartment() != null
                     ? challenge.getDepartment().getDepartmentId() : null;
-            Integer userDeptId = user.getDepartment() != null
-                    ? user.getDepartment().getDepartmentId() : null;
+            Integer userDeptId = caller.getDepartment() != null
+                    ? caller.getDepartment().getDepartmentId() : null;
 
             boolean inSameDepartment = challengeDeptId != null
                     && challengeDeptId.equals(userDeptId);
             boolean isCreator = challenge.getCreatedBy().getUserId()
-                    .equals(requestDTO.getUserId());
+                    .equals(caller.getUserId());
 
             if (!inSameDepartment && !isCreator) {
                 throw new WellnessTrackerException("Service.CHALLENGE_ACCESS_DENIED");
             }
         }
 
-        // Check if user already joined this challenge
         Optional<ChallengeParticipant> existing = participantRepository
                 .findByChallenge_ChallengeIdAndUser_UserId(
-                        requestDTO.getChallengeId(), requestDTO.getUserId());
+                        requestDTO.getChallengeId(), caller.getUserId());
         if (existing.isPresent()) {
             throw new WellnessTrackerException("Service.ALREADY_JOINED_CHALLENGE");
         }
 
         ChallengeParticipant participant = new ChallengeParticipant();
         participant.setChallenge(challenge);
-        participant.setUser(user);
+        participant.setUser(caller);
 
         Integer participantId = participantRepository.save(participant).getParticipantId();
 
-        // US 10 — notify the joining user.
-        // null referenceId — join confirmation is naturally deduped by the
-        // ALREADY_JOINED_CHALLENGE guard above (user can only join once).
         notificationService.createNotification(
-                requestDTO.getUserId(),
+                caller.getUserId(),
                 NotificationType.CHALLENGE,
                 "You Joined: " + challenge.getTitle(),
                 "You've joined '" + challenge.getTitle() + "'. Good luck!",
@@ -121,28 +114,22 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
         return participantId;
     }
 
-    // US 03 - Active/upcoming challenge catalog for a user.
-    // Uses syncAndNotifyActivations() so participants are notified when a
-    // challenge they joined goes ACTIVE.
-    // Null-dept guard: returns empty list if user has no department.
+    // US 03 - Active/upcoming challenge catalog for the JWT caller.
     @Override
     @Transactional(readOnly = false)
-    public List<ActiveChallengeResponseDTO> getActiveChallenges(Integer userId)
+    public List<ActiveChallengeResponseDTO> getActiveChallenges()
             throws WellnessTrackerException {
-        Optional<User> userOptional = userRepository.findById(userId);
-        User user = userOptional.orElseThrow(
-                () -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
+        User caller = authenticatedUserResolver.resolveCurrentUser();
 
         statusSyncService.syncAndNotifyActivations();
 
-        // Null-dept guard — return empty list if user has no department
-        if (user.getDepartment() == null) {
+        if (caller.getDepartment() == null) {
             return new ArrayList<>();
         }
 
         LocalDate today = LocalDate.now();
         List<Challenge> challenges = challengeRepository.findVisibleChallengesForDepartment(
-                today, user.getDepartment().getDepartmentId());
+                today, caller.getDepartment().getDepartmentId());
 
         if (challenges.isEmpty()) {
             return new ArrayList<>();
@@ -154,7 +141,8 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
         }
 
         Set<Integer> joinedIdSet = new HashSet<>(
-                participantRepository.findJoinedChallengeIdsByUser(userId, challengeIds));
+                participantRepository.findJoinedChallengeIdsByUser(
+                        caller.getUserId(), challengeIds));
 
         List<ActiveChallengeResponseDTO> responseList = new ArrayList<>();
         for (Challenge c : challenges) {
@@ -166,20 +154,17 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
         return responseList;
     }
 
-    // US 03 - All challenges the user has joined, with live progress.
-    // Uses syncAndNotifyActivations() for same reason as getActiveChallenges().
+    // US 03 - All challenges the JWT caller has joined, with live progress.
     @Override
     @Transactional(readOnly = false)
-    public List<MyChallengeResponseDTO> getMyChallenges(Integer userId)
+    public List<MyChallengeResponseDTO> getMyChallenges()
             throws WellnessTrackerException {
-        if (!userRepository.existsById(userId)) {
-            throw new WellnessTrackerException("Service.USER_NOT_FOUND");
-        }
+        Integer callerId = authenticatedUserResolver.resolveCurrentUserId();
 
         statusSyncService.syncAndNotifyActivations();
 
         List<ChallengeParticipant> participations = participantRepository
-                .findByUser_UserIdOrderByJoinedAtDesc(userId);
+                .findByUser_UserIdOrderByJoinedAtDesc(callerId);
 
         if (participations.isEmpty()) {
             return new ArrayList<>();
@@ -199,7 +184,7 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
         LocalDate boundedEnd = latestEnd.isAfter(today) ? today : latestEnd;
 
         List<Object[]> allActuals = activityLogRepository
-                .findActualsByUserAndDateRange(userId, earliestStart, boundedEnd);
+                .findActualsByUserAndDateRange(callerId, earliestStart, boundedEnd);
 
         Map<ActivityType, Double> activityTotalMap = new HashMap<>();
         for (Object[] row : allActuals) {
@@ -217,7 +202,7 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
                 actualValue = activityTotalMap.getOrDefault(c.getMetricType(), 0.0);
             } else {
                 List<Object[]> challengeActuals = activityLogRepository
-                        .findActualsByUserAndDateRange(userId, c.getStartDate(), challengeEnd);
+                        .findActualsByUserAndDateRange(callerId, c.getStartDate(), challengeEnd);
                 actualValue = 0.0;
                 for (Object[] row : challengeActuals) {
                     if (c.getMetricType().equals(row[0])) {
@@ -228,17 +213,15 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
             }
 
             int progressPct = calcPct(actualValue, c.getGoalValue());
-
-            // Derive status live from dates instead of reading stale DB column
             ChallengeStatus liveStatus = resolveStatus(c.getStartDate(), c.getEndDate());
 
             if (progressPct >= 100 && ChallengeStatus.ACTIVE.equals(liveStatus)) {
                 boolean alreadyNotified = notificationRepository
                         .existsByUser_UserIdAndNotificationTypeAndReferenceId(
-                                userId, NotificationType.CHALLENGE, -c.getChallengeId());
+                                callerId, NotificationType.CHALLENGE, -c.getChallengeId());
                 if (!alreadyNotified) {
                     notificationService.createNotification(
-                            userId,
+                            callerId,
                             NotificationType.CHALLENGE,
                             "Challenge Completed: " + c.getTitle(),
                             "You've reached 100% of your goal in '" + c.getTitle()
@@ -247,7 +230,6 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
                 }
             }
 
-            // daysRemaining: clamped to 0 for ended challenges
             long rawDaysRemaining = ChronoUnit.DAYS.between(today, c.getEndDate());
             int daysRemaining = (int) Math.max(0, rawDaysRemaining);
 
@@ -284,8 +266,6 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
         return ChallengeStatus.ACTIVE;
     }
 
-    // Maps a Challenge entity to ActiveChallengeResponseDTO.
-    // daysRemaining is clamped to 0 for challenges whose endDate has passed.
     private ActiveChallengeResponseDTO mapToActiveDTO(Challenge c, LocalDate today) {
         long rawDays = ChronoUnit.DAYS.between(today, c.getEndDate());
         int daysRemaining = (int) Math.max(0, rawDays);

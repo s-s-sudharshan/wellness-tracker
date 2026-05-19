@@ -11,10 +11,6 @@ import lombok.Data;
 @Data
 public class BadgeRequestDTO {
 
-    // The manager/HR user creating or editing this badge
-    @NotNull(message = "{badge.createdby.absent}")
-    private Integer requestingUserId;
-
     @NotBlank(message = "{badge.title.absent}")
     @Size(max = 100, message = "{badge.title.toolong}")
     private String title;

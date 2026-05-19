@@ -12,11 +12,10 @@ import com.infy.dto.WellnessArticleRequestDTO;
 import com.infy.dto.WellnessArticleResponseDTO;
 import com.infy.entity.User;
 import com.infy.entity.WellnessArticle;
-import com.infy.enums.Role;
 import com.infy.enums.WellnessArticleStatus;
 import com.infy.exception.WellnessTrackerException;
-import com.infy.repository.UserRepository;
 import com.infy.repository.WellnessArticleRepository;
+import com.infy.security.AuthenticatedUserResolver;
 
 @Service
 @Transactional
@@ -26,21 +25,23 @@ public class WellnessArticleServiceImpl implements WellnessArticleService {
     private WellnessArticleRepository articleRepository;
 
     @Autowired
-    private UserRepository userRepository;
+    private AuthenticatedUserResolver authenticatedUserResolver;
 
+    // Author identity derived entirely from JWT — createdBy removed from DTO.
+    // @PreAuthorize("hasRole('HR')") enforced on interface.
     @Override
     public Integer createArticle(WellnessArticleRequestDTO requestDTO)
             throws WellnessTrackerException {
 
-        User author = resolveHrUser(requestDTO.getCreatedBy());
+        // Author is always the JWT caller — no DTO field to cross-check against
+        User caller = authenticatedUserResolver.resolveCurrentUser();
 
         WellnessArticle article = new WellnessArticle();
-        article.setCreatedBy(author);
+        article.setCreatedBy(caller);
         article.setTitle(requestDTO.getTitle());
         article.setDescription(requestDTO.getDescription());
         article.setArticleUrl(requestDTO.getArticleUrl());
         article.setRelatedMetric(requestDTO.getRelatedMetric());
-        // Honour explicit status from request; entity @PrePersist defaults to DRAFT
         article.setStatus(requestDTO.getStatus() != null
                 ? requestDTO.getStatus()
                 : WellnessArticleStatus.DRAFT);
@@ -48,20 +49,22 @@ public class WellnessArticleServiceImpl implements WellnessArticleService {
         return articleRepository.save(article).getArticleId();
     }
 
+    // @PreAuthorize("hasRole('HR')") enforced on interface.
+    // Ownership check: only the author can edit their own article.
     @Override
     public WellnessArticleResponseDTO updateArticle(
             Integer articleId, WellnessArticleRequestDTO requestDTO)
             throws WellnessTrackerException {
 
-        // Validate the requesting user is HR
-        resolveHrUser(requestDTO.getCreatedBy());
+        // Caller identity from JWT — no DTO field to cross-check against
+        User caller = authenticatedUserResolver.resolveCurrentUser();
 
         Optional<WellnessArticle> optional = articleRepository.findById(articleId);
         WellnessArticle article = optional.orElseThrow(
                 () -> new WellnessTrackerException("Service.ARTICLE_NOT_FOUND"));
 
-        // Only the author can edit their own article
-        if (!article.getCreatedBy().getUserId().equals(requestDTO.getCreatedBy())) {
+        // Ownership check using JWT caller — not a client-supplied createdBy
+        if (!article.getCreatedBy().getUserId().equals(caller.getUserId())) {
             throw new WellnessTrackerException("Service.ARTICLE_ACCESS_DENIED");
         }
 
@@ -76,15 +79,16 @@ public class WellnessArticleServiceImpl implements WellnessArticleService {
         return mapToDTO(articleRepository.save(article));
     }
 
+    // Returns the JWT caller's own articles (HR only — role gate on interface).
     @Override
     @Transactional(readOnly = true)
-    public List<WellnessArticleResponseDTO> getArticlesByHr(Integer userId)
+    public List<WellnessArticleResponseDTO> getArticlesByHr()
             throws WellnessTrackerException {
 
-        resolveHrUser(userId);
+        Integer callerId = authenticatedUserResolver.resolveCurrentUserId();
 
         List<WellnessArticle> articles =
-                articleRepository.findByCreatedBy_UserIdOrderByCreatedAtDesc(userId);
+                articleRepository.findByCreatedBy_UserIdOrderByCreatedAtDesc(callerId);
 
         if (articles.isEmpty()) {
             throw new WellnessTrackerException("Service.NO_ARTICLES_FOUND");
@@ -95,17 +99,6 @@ public class WellnessArticleServiceImpl implements WellnessArticleService {
             response.add(mapToDTO(a));
         }
         return response;
-    }
-    
-    // Validates user exists and is HR. Throws appropriate exceptions otherwise.
-    private User resolveHrUser(Integer userId) throws WellnessTrackerException {
-        Optional<User> optional = userRepository.findById(userId);
-        User user = optional.orElseThrow(
-                () -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
-        if (!Role.HR.equals(user.getRole())) {
-            throw new WellnessTrackerException("Service.NOT_HR");
-        }
-        return user;
     }
 
     private WellnessArticleResponseDTO mapToDTO(WellnessArticle a) {

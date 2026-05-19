@@ -8,9 +8,6 @@ import lombok.Data;
 
 @Data
 public class WeeklyGoalRequestDTO {
-
-	@NotNull(message = "{weeklygoal.userid.absent}")
-	private Integer userId;
  
 	@NotNull(message = "{weeklygoal.weekstartdate.absent}")
 	private LocalDate weekStartDate;

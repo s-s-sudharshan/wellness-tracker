@@ -41,8 +41,8 @@ import com.infy.repository.ChallengeRepository;
 import com.infy.repository.MoodLogRepository;
 import com.infy.repository.NotificationRepository;
 import com.infy.repository.RecommendationRepository;
-import com.infy.repository.UserRepository;
 import com.infy.repository.WeeklyGoalRepository;
+import com.infy.security.AuthenticatedUserResolver;
 
 @Service
 @Transactional
@@ -50,8 +50,6 @@ public class DashboardServiceImpl implements DashboardService {
 
     private static final int RECOMMENDED_CHALLENGES_MAX = 5;
 
-    @Autowired
-    private UserRepository userRepository;
 
     @Autowired
     private ActivityLogRepository activityLogRepository;
@@ -77,11 +75,14 @@ public class DashboardServiceImpl implements DashboardService {
     @Autowired
     private RecommendationRepository recommendationRepository;
 
+    @Autowired
+    private AuthenticatedUserResolver authenticatedUserResolver;
+
+    // userId derived from JWT — never from a caller-supplied parameter.
     @Override
-    public DashboardResponseDTO getDashboard(Integer userId) throws WellnessTrackerException {
-        Optional<User> userOptional = userRepository.findById(userId);
-        User user = userOptional.orElseThrow(
-                () -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
+    public DashboardResponseDTO getDashboard() throws WellnessTrackerException {
+        User caller = authenticatedUserResolver.resolveCurrentUser();
+        Integer userId = caller.getUserId();
 
         LocalDate today = LocalDate.now();
         LocalDate thisWeekMonday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
@@ -97,9 +98,9 @@ public class DashboardServiceImpl implements DashboardService {
         }
         response.setRecentActivities(recentActivities);
 
-        // 2. Active joined challenges — filter ACTIVE status from getMyChallenges()
+        // 2. Active joined challenges — getMyChallenges() now derives userId from JWT
         List<MyChallengeResponseDTO> activeChallenges = new ArrayList<>();
-        List<MyChallengeResponseDTO> allJoined = participantService.getMyChallenges(userId);
+        List<MyChallengeResponseDTO> allJoined = participantService.getMyChallenges();
         for (MyChallengeResponseDTO dto : allJoined) {
             if (ChallengeStatus.ACTIVE.equals(dto.getChallengeStatus())) {
                 activeChallenges.add(dto);
@@ -180,7 +181,6 @@ public class DashboardServiceImpl implements DashboardService {
 
             response.setWeeklyGoal(goalDTO);
         }
-        // goalOptional empty → weeklyGoal stays null in response
 
         // 5. Today's mood log — null if not logged today (never throws)
         Optional<MoodLog> moodOptional = moodLogRepository
@@ -197,17 +197,15 @@ public class DashboardServiceImpl implements DashboardService {
             moodDTO.setCreatedAt(mood.getCreatedAt());
             response.setTodayMood(moodDTO);
         }
-        // moodOptional empty → todayMood stays null in response
 
         // 6. Unread notification count
         Integer unreadCount = notificationRepository
                 .countByUser_UserIdAndIsReadFalse(userId);
         response.setUnreadNotificationCount(unreadCount != null ? unreadCount : 0);
 
-        // 7. US 07 — Featured challenges visible to user's department.
-        // Null-dept guard: return empty list if user has no department.
-        Integer userDeptId = user.getDepartment() != null
-                ? user.getDepartment().getDepartmentId() : null;
+        // 7. US 07 — Featured challenges visible to caller's department.
+        Integer userDeptId = caller.getDepartment() != null
+                ? caller.getDepartment().getDepartmentId() : null;
 
         if (userDeptId != null) {
             List<Challenge> featuredList = challengeRepository
@@ -235,14 +233,11 @@ public class DashboardServiceImpl implements DashboardService {
         }
 
         // 8. US 07 — Recommended challenges ranked by last-30-days activity frequency.
-        // Null-dept guard: return empty list if user has no department.
         response.setRecommendedChallenges(
                 buildRecommendedChallenges(userId, userDeptId, today));
 
-        // 9. US 08 — Personalised wellness recommendations.
-        // Read persisted ACTIVE recommendations directly — dashboard GET must not
-        // regenerate, delete, or recreate recommendation rows on every refresh.
-        // Regeneration stays in GET /wellness/recommendations/users/{userId}.
+        // 9. US 08 — Read persisted ACTIVE recommendations directly.
+        // Dashboard GET must not regenerate recommendation rows on every refresh.
         List<Recommendation> persistedRecs = recommendationRepository
                 .findByUser_UserIdAndStatusOrderByCreatedAtDesc(
                         userId, RecommendationStatus.ACTIVE);
@@ -255,13 +250,6 @@ public class DashboardServiceImpl implements DashboardService {
         return response;
     }
 
-    // Builds the recommended challenges list for the dashboard.
-    // Algorithm:
-    //   1. Fetch last-30-days activity frequency per type, sorted by count DESC.
-    //   2. Load all visible unjoined challenges for the user's department.
-    //   3. Iterate metrics strongest-first; for each metric add all matching
-    //      unjoined challenges until the cap of 5 is reached.
-    //   4. Return empty list if user has no department or no activity in last 30 days.
     private List<ActiveChallengeResponseDTO> buildRecommendedChallenges(
             Integer userId, Integer userDeptId, LocalDate today) {
 
@@ -269,18 +257,15 @@ public class DashboardServiceImpl implements DashboardService {
             return new ArrayList<>();
         }
 
-        LocalDate thirtyDaysAgo = today.minusDays(29); // inclusive 30-day window
+        LocalDate thirtyDaysAgo = today.minusDays(29);
 
         List<Object[]> frequencyRows = activityLogRepository
                 .countActivityFrequencyByUserAndDateRange(userId, thirtyDaysAgo, today);
 
-        // No activity in last 30 days — return empty list per plan decision
         if (frequencyRows.isEmpty()) {
             return new ArrayList<>();
         }
 
-        // Build ordered list of activity types: strongest habit first
-        // LinkedHashMap preserves insertion order (already sorted by query DESC)
         Map<ActivityType, Long> frequencyMap = new LinkedHashMap<>();
         for (Object[] row : frequencyRows) {
             ActivityType type  = (ActivityType) row[0];
@@ -288,7 +273,6 @@ public class DashboardServiceImpl implements DashboardService {
             frequencyMap.put(type, count);
         }
 
-        // Load all visible non-expired challenges for this user's department
         List<Challenge> visibleChallenges = challengeRepository
                 .findVisibleChallengesForDepartment(today, userDeptId);
 
@@ -296,7 +280,6 @@ public class DashboardServiceImpl implements DashboardService {
             return new ArrayList<>();
         }
 
-        // Find which of these challenges the user has already joined
         List<Integer> visibleIds = new ArrayList<>();
         for (Challenge c : visibleChallenges) {
             visibleIds.add(c.getChallengeId());
@@ -304,7 +287,6 @@ public class DashboardServiceImpl implements DashboardService {
         Set<Integer> joinedIds = new HashSet<>(
                 participantRepository.findJoinedChallengeIdsByUser(userId, visibleIds));
 
-        // Build result: iterate metrics strongest-first, add matching unjoined challenges
         List<ActiveChallengeResponseDTO> result = new ArrayList<>();
         for (ActivityType metric : frequencyMap.keySet()) {
             if (result.size() >= RECOMMENDED_CHALLENGES_MAX) {
@@ -325,8 +307,6 @@ public class DashboardServiceImpl implements DashboardService {
         return result;
     }
 
-    // Maps a Challenge entity to ActiveChallengeResponseDTO.
-    // daysRemaining is clamped to 0 for challenges whose endDate has passed.
     private ActiveChallengeResponseDTO mapToChallengeDTO(Challenge c, LocalDate today) {
         long rawDays = ChronoUnit.DAYS.between(today, c.getEndDate());
         int daysRemaining = (int) Math.max(0, rawDays);

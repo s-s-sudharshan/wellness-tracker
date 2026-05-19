@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,8 +26,8 @@ import com.infy.repository.ActivityLogRepository;
 import com.infy.repository.ChallengeParticipantRepository;
 import com.infy.repository.ChallengeRepository;
 import com.infy.repository.RecommendationRepository;
-import com.infy.repository.UserRepository;
 import com.infy.repository.WellnessArticleRepository;
+import com.infy.security.AuthenticatedUserResolver;
 
 @Service
 @Transactional
@@ -43,26 +42,24 @@ public class RecommendationServiceImpl implements RecommendationService {
     private static final int MIN_RECOMMENDATIONS = 3;
     private static final int MAX_RECOMMENDATIONS = 5;
 
-    @Autowired private UserRepository                 userRepository;
     @Autowired private ActivityLogRepository          activityLogRepository;
     @Autowired private ChallengeRepository            challengeRepository;
     @Autowired private ChallengeParticipantRepository participantRepository;
     @Autowired private RecommendationRepository       recommendationRepository;
     @Autowired private WellnessArticleRepository      articleRepository;
     @Autowired private ChallengeStatusSyncService     statusSyncService;
+    @Autowired private AuthenticatedUserResolver      authenticatedUserResolver;
 
+    // userId derived from JWT — never from a caller-supplied parameter.
     @Override
-    public List<RecommendationResponseDTO> getRecommendations(Integer userId)
+    public List<RecommendationResponseDTO> getRecommendations()
             throws WellnessTrackerException {
 
-        // 1. Validate user
-        Optional<User> userOptional = userRepository.findById(userId);
-        User user = userOptional.orElseThrow(
-                () -> new WellnessTrackerException("Service.USER_NOT_FOUND"));
+        User caller = authenticatedUserResolver.resolveCurrentUser();
+        Integer userId = caller.getUserId();
 
         statusSyncService.syncStatuses();
 
-        // 2. Get 7-day activity totals (today inclusive)
         LocalDate today   = LocalDate.now();
         LocalDate weekAgo = today.minusDays(6);
 
@@ -83,9 +80,8 @@ public class RecommendationServiceImpl implements RecommendationService {
             }
         }
 
-        // 3. Load unjoined visible challenges for this user
-        Integer userDeptId = user.getDepartment() != null
-                ? user.getDepartment().getDepartmentId() : null;
+        Integer userDeptId = caller.getDepartment() != null
+                ? caller.getDepartment().getDepartmentId() : null;
 
         List<Challenge> visibleChallenges = userDeptId != null
                 ? challengeRepository.findVisibleChallengesForDepartment(today, userDeptId)
@@ -101,9 +97,6 @@ public class RecommendationServiceImpl implements RecommendationService {
                 : new HashSet<>(participantRepository
                         .findJoinedChallengeIdsByUser(userId, visibleIds));
 
-        // 4. Build low metrics map — ratio = actual / threshold.
-        //    Only metrics below their threshold are included.
-        //    Sort ascending so the most neglected metric is recommended first.
         Map<ActivityType, Double> ratioMap = new HashMap<>();
         if (totalWater      < LOW_WATER_LITERS)    ratioMap.put(ActivityType.WATER,      totalWater      / LOW_WATER_LITERS);
         if (totalSteps      < LOW_STEPS)            ratioMap.put(ActivityType.STEPS,      totalSteps      / LOW_STEPS);
@@ -114,8 +107,6 @@ public class RecommendationServiceImpl implements RecommendationService {
         List<ActivityType> lowMetrics = new ArrayList<>(ratioMap.keySet());
         lowMetrics.sort((a, b) -> Double.compare(ratioMap.get(a), ratioMap.get(b)));
 
-        // 5. Rule engine — for each low metric (most neglected first),
-        //    add the first matching unjoined challenge and its article.
         Set<Integer> seenChallengeIds = new HashSet<>();
         Set<String>  seenArticleUrls  = new HashSet<>();
         List<Recommendation> results  = new ArrayList<>();
@@ -127,32 +118,30 @@ public class RecommendationServiceImpl implements RecommendationService {
                 if (c.getMetricType().equals(metric)
                         && !joinedIds.contains(c.getChallengeId())
                         && !seenChallengeIds.contains(c.getChallengeId())) {
-                    results.add(challengeRec(user, c, metric));
+                    results.add(challengeRec(caller, c, metric));
                     seenChallengeIds.add(c.getChallengeId());
                     break;
                 }
             }
 
             if (results.size() < MAX_RECOMMENDATIONS) {
-                addArticleForMetric(results, seenArticleUrls, user, metric);
+                addArticleForMetric(results, seenArticleUrls, caller, metric);
             }
         }
 
-        // 6. Padding — if still below MIN, add general published articles
         if (results.size() < MIN_RECOMMENDATIONS) {
             List<WellnessArticle> generalArticles = articleRepository
                     .findGeneralPublishedArticles(WellnessArticleStatus.PUBLISHED);
             for (WellnessArticle a : generalArticles) {
                 if (results.size() >= MIN_RECOMMENDATIONS) break;
                 if (!seenArticleUrls.contains(a.getArticleUrl())) {
-                    results.add(articleRec(user, a.getTitle(), a.getDescription(),
+                    results.add(articleRec(caller, a.getTitle(), a.getDescription(),
                             a.getArticleUrl()));
                     seenArticleUrls.add(a.getArticleUrl());
                 }
             }
         }
 
-        // 7. Persist and return
         recommendationRepository.deleteActiveByUserId(userId);
         List<RecommendationResponseDTO> response = new ArrayList<>();
         for (Recommendation rec : results) {
@@ -161,8 +150,6 @@ public class RecommendationServiceImpl implements RecommendationService {
         return response;
     }
 
-    // Adds the most recent published article for the given metric.
-    // Silently does nothing if none exists or MAX is already reached.
     private void addArticleForMetric(List<Recommendation> results, Set<String> seenUrls,
             User user, ActivityType metric) {
 

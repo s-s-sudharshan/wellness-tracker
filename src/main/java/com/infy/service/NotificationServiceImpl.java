@@ -17,6 +17,7 @@ import com.infy.enums.NotificationType;
 import com.infy.exception.WellnessTrackerException;
 import com.infy.repository.NotificationRepository;
 import com.infy.repository.UserRepository;
+import com.infy.security.AuthenticatedUserResolver;
 
 @Service
 @Transactional
@@ -30,9 +31,11 @@ public class NotificationServiceImpl implements NotificationService {
     @Autowired
     private UserRepository userRepository;
 
-    // Internal method — called by BadgeServiceImpl, ChallengeServiceImpl,
-    // ChallengeParticipantServiceImpl, and ChallengeStatusSyncService.
-    // referenceId is nullable — only set for challenge activation notifications.
+    @Autowired
+    private AuthenticatedUserResolver authenticatedUserResolver;
+
+    // Internal method — called by other services, not from API layer.
+    // userId is the TARGET recipient — not derived from JWT (scheduler sends to many users).
     // Silently logs and returns on any failure so the caller is never interrupted.
     @Override
     public void createNotification(Integer userId, NotificationType type,
@@ -55,17 +58,16 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
-    // US 10 - Flat list, newest first. Returns [] when no notifications exist.
+    // US 10 - Get the JWT caller's notifications, newest first.
+    // Returns [] when no notifications exist.
     @Override
     @Transactional(readOnly = true)
-    public List<NotificationResponseDTO> getNotifications(Integer userId)
+    public List<NotificationResponseDTO> getNotifications()
             throws WellnessTrackerException {
-        if (!userRepository.existsById(userId)) {
-            throw new WellnessTrackerException("Service.USER_NOT_FOUND");
-        }
+        Integer callerId = authenticatedUserResolver.resolveCurrentUserId();
 
         List<Notification> notifications =
-                notificationRepository.findByUser_UserIdOrderByCreatedAtDesc(userId);
+                notificationRepository.findByUser_UserIdOrderByCreatedAtDesc(callerId);
 
         List<NotificationResponseDTO> responseList = new ArrayList<>();
         for (Notification n : notifications) {
@@ -74,35 +76,30 @@ public class NotificationServiceImpl implements NotificationService {
         return responseList;
     }
 
-    // US 10 - Unread count for bell icon
+    // US 10 - Unread count for the JWT caller.
     @Override
     @Transactional(readOnly = true)
-    public Integer getUnreadCount(Integer userId) throws WellnessTrackerException {
-        if (!userRepository.existsById(userId)) {
-            throw new WellnessTrackerException("Service.USER_NOT_FOUND");
-        }
-        Integer count = notificationRepository.countByUser_UserIdAndIsReadFalse(userId);
+    public Integer getUnreadCount() throws WellnessTrackerException {
+        Integer callerId = authenticatedUserResolver.resolveCurrentUserId();
+        Integer count = notificationRepository.countByUser_UserIdAndIsReadFalse(callerId);
         return count != null ? count : 0;
     }
 
-    // US 10 - Mark all notifications as read
+    // US 10 - Mark all notifications as read for the JWT caller.
     @Override
-    public void markAllAsRead(Integer userId) throws WellnessTrackerException {
-        if (!userRepository.existsById(userId)) {
-            throw new WellnessTrackerException("Service.USER_NOT_FOUND");
-        }
-        notificationRepository.markAllAsRead(userId);
+    public void markAllAsRead() throws WellnessTrackerException {
+        Integer callerId = authenticatedUserResolver.resolveCurrentUserId();
+        notificationRepository.markAllAsRead(callerId);
     }
 
-    // US 10 - Mark a single notification as read (ownership guarded)
+    // US 10 - Mark a single notification as read (ownership guarded).
+    // Ownership: the notification must belong to the JWT caller.
     @Override
-    public void markAsRead(Integer notificationId, Integer userId)
-            throws WellnessTrackerException {
-        if (!userRepository.existsById(userId)) {
-            throw new WellnessTrackerException("Service.USER_NOT_FOUND");
-        }
+    public void markAsRead(Integer notificationId) throws WellnessTrackerException {
+        Integer callerId = authenticatedUserResolver.resolveCurrentUserId();
+
         Notification notification = notificationRepository
-                .findByNotificationIdAndUser_UserId(notificationId, userId)
+                .findByNotificationIdAndUser_UserId(notificationId, callerId)
                 .orElseThrow(
                         () -> new WellnessTrackerException("Service.NOTIFICATION_NOT_FOUND"));
 
