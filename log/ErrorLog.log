@@ -1654,3 +1654,29 @@ com.infy.exception.WellnessTrackerException: Service.ACTIVITY_LOG_NOT_FOUND
 	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.19.jar:10.1.19]
 	at java.lang.Thread.run(Thread.java:1583) [?:?]
 19-May-2026 18:58:37 WARN - Resolved [com.infy.exception.WellnessTrackerException: Service.ACTIVITY_LOG_NOT_FOUND]
+21-May-2026 10:31:11 INFO - HV000001: Hibernate Validator 8.0.1.Final
+21-May-2026 10:31:11 INFO - Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+21-May-2026 10:31:11 INFO - For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+21-May-2026 10:31:15 INFO - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+21-May-2026 10:31:15 INFO - Finished Spring Data repository scanning in 73 ms. Found 14 JPA repository interfaces.
+21-May-2026 10:31:16 INFO - Tomcat initialized with port 8765 (http)
+21-May-2026 10:31:16 INFO - Initializing ProtocolHandler ["http-nio-8765"]
+21-May-2026 10:31:16 INFO - Starting service [Tomcat]
+21-May-2026 10:31:16 INFO - Starting Servlet engine: [Apache Tomcat/10.1.19]
+21-May-2026 10:31:16 INFO - Initializing Spring embedded WebApplicationContext
+21-May-2026 10:31:16 INFO - Root WebApplicationContext: initialization completed in 4728 ms
+21-May-2026 10:31:17 INFO - HikariPool-1 - Starting...
+21-May-2026 10:31:17 INFO - HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@2073ebcd
+21-May-2026 10:31:17 INFO - HikariPool-1 - Start completed.
+21-May-2026 10:31:17 INFO - HHH000204: Processing PersistenceUnitInfo [name: default]
+21-May-2026 10:31:17 INFO - HHH000412: Hibernate ORM core version 6.4.4.Final
+21-May-2026 10:31:17 INFO - HHH000026: Second-level cache disabled
+21-May-2026 10:31:17 INFO - No LoadTimeWeaver setup: ignoring JPA class transformer
+21-May-2026 10:31:18 INFO - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+21-May-2026 10:31:18 INFO - Initialized JPA EntityManagerFactory for persistence unit 'default'
+21-May-2026 10:31:19 INFO - Hibernate is in classpath; If applicable, HQL parser will be used.
+21-May-2026 10:31:21 WARN - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+21-May-2026 10:31:21 INFO - Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@5c35c72a, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@677f983c, org.springframework.security.web.context.SecurityContextHolderFilter@6af23e24, org.springframework.security.web.header.HeaderWriterFilter@5972487e, org.springframework.web.filter.CorsFilter@1899e7c5, org.springframework.security.web.authentication.logout.LogoutFilter@b9b9893, com.infy.security.JwtAuthenticationFilter@36d143db, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@51488b7, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@64e75fc4, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@2f2bb550, org.springframework.security.web.session.SessionManagementFilter@3e25fefc, org.springframework.security.web.access.ExceptionTranslationFilter@d84da6b, org.springframework.security.web.access.intercept.AuthorizationFilter@2fca1a6c]
+21-May-2026 10:31:22 INFO - LiveReload server is running on port 35729
+21-May-2026 10:31:22 INFO - Starting ProtocolHandler ["http-nio-8765"]
+21-May-2026 10:31:22 INFO - Tomcat started on port 8765 (http) with context path ''
