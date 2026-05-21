@@ -54,7 +54,6 @@ public class ActivityLogAPI {
 
     // US 01 - Update an existing activity log.
     // Ownership enforced in service: log must belong to JWT caller.
-    // userId removed from request body — derived from JWT.
     @PutMapping(value = "/activity-logs/{activityLogId}")
     public ResponseEntity<ActivityLogResponseDTO> updateActivityLog(
             @PathVariable Integer activityLogId,
@@ -66,7 +65,7 @@ public class ActivityLogAPI {
     }
 
     // US 01 - Delete an activity log.
-    // userId query param removed — caller identity derived from JWT inside service.
+    // Ownership enforced in service: log must belong to JWT caller.
     @DeleteMapping(value = "/activity-logs/{activityLogId}")
     public ResponseEntity<String> deleteActivityLog(
             @PathVariable Integer activityLogId)
@@ -77,7 +76,6 @@ public class ActivityLogAPI {
     }
 
     // US 01 - Get the JWT caller's own activity history.
-    // Path changed from /users/{userId} to /mine.
     @GetMapping(value = "/activity-logs/mine")
     public ResponseEntity<List<ActivityLogResponseDTO>> getActivityHistory()
             throws WellnessTrackerException {
@@ -85,37 +83,34 @@ public class ActivityLogAPI {
         return new ResponseEntity<>(activityLogs, HttpStatus.OK);
     }
 
-    // US 02 - Get activity summary for a target user (manager/HR only).
-    // userId is the TARGET user being viewed — not the caller.
-    // Role gate: @PreAuthorize("hasRole('MANAGER') or hasRole('HR')") on service.
-    @GetMapping(value = "/activity-logs/users/{userId}/summary")
+    // US 02 - Get the JWT caller's own activity summary.
+    // Path changed from /users/{userId}/summary to /mine/summary.
+    // userId removed — derived from JWT inside service.
+    @GetMapping(value = "/activity-logs/mine/summary")
     public ResponseEntity<ActivitySummaryDTO> getActivitySummary(
-            @PathVariable Integer userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate)
             throws WellnessTrackerException {
-        ActivitySummaryDTO summary = activityService.getActivitySummary(userId, fromDate, toDate);
+        ActivitySummaryDTO summary = activityService.getActivitySummary(fromDate, toDate);
         return new ResponseEntity<>(summary, HttpStatus.OK);
     }
 
-    // US 02 - Get day-wise activity trend for a target user (manager/HR only).
-    // userId is the TARGET user being viewed — not the caller.
+    // US 02 - Get the JWT caller's own day-wise activity trend.
+    // Path changed from /users/{userId}/trend to /mine/trend.
+    // userId removed — derived from JWT inside service.
     // metricType is optional — omit to get all types, provide to filter to one type.
-    @GetMapping(value = "/activity-logs/users/{userId}/trend")
+    @GetMapping(value = "/activity-logs/mine/trend")
     public ResponseEntity<List<ActivityTrendPointDTO>> getActivityTrend(
-            @PathVariable Integer userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) ActivityType metricType)
             throws WellnessTrackerException {
         List<ActivityTrendPointDTO> trend = activityService.getActivityTrend(
-                userId, fromDate, toDate, metricType);
+                fromDate, toDate, metricType);
         return new ResponseEntity<>(trend, HttpStatus.OK);
     }
 
     // US 09 - Filtered and sorted activity history for the JWT caller.
-    // Path changed from /users/{userId}/search to /mine/search.
-    // All query params are optional except the path (JWT identity used).
     // sortBy: "date" (default) or "amount".
     @GetMapping(value = "/activity-logs/mine/search")
     public ResponseEntity<List<ActivityLogResponseDTO>> getFilteredActivityHistory(
@@ -134,7 +129,6 @@ public class ActivityLogAPI {
     }
 
     // US 09 - Export filtered activity history as CSV for the JWT caller.
-    // Path changed from /users/{userId}/export to /mine/export.
     @GetMapping(value = "/activity-logs/mine/export")
     public ResponseEntity<byte[]> exportActivityHistory(
             @RequestParam(required = false)

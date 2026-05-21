@@ -43,19 +43,14 @@ public class LeaderboardServiceImpl implements LeaderboardService {
     public UserRepository userRepository;
 
     @Autowired
-    public ChallengeStatusSyncService statusSyncService;
-
-    @Autowired
     private AuthenticatedUserResolver authenticatedUserResolver;
 
+    // syncStatuses() removed — handled by scheduled job at midnight IST.
     // requestingUserId derived from JWT — not supplied by client.
     @Override
     public LeaderboardResponseDTO getLeaderboard(Integer challengeId)
             throws WellnessTrackerException {
 
-        statusSyncService.syncStatuses();
-
-        // Derive caller identity from JWT
         User caller = authenticatedUserResolver.resolveCurrentUser();
         Integer requestingUserId = caller.getUserId();
 

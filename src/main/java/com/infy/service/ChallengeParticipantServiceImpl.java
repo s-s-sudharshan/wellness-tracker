@@ -48,9 +48,6 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
     private NotificationRepository notificationRepository;
 
     @Autowired
-    private ChallengeStatusSyncService statusSyncService;
-
-    @Autowired
     private NotificationService notificationService;
 
     @Autowired
@@ -115,13 +112,13 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
     }
 
     // US 03 - Active/upcoming challenge catalog for the JWT caller.
+    // syncAndNotifyActivations() removed — status sync runs at midnight IST,
+    // activation notifications fire at 8:00 AM IST via the scheduler.
     @Override
     @Transactional(readOnly = false)
     public List<ActiveChallengeResponseDTO> getActiveChallenges()
             throws WellnessTrackerException {
         User caller = authenticatedUserResolver.resolveCurrentUser();
-
-        statusSyncService.syncAndNotifyActivations();
 
         if (caller.getDepartment() == null) {
             return new ArrayList<>();
@@ -155,13 +152,13 @@ public class ChallengeParticipantServiceImpl implements ChallengeParticipantServ
     }
 
     // US 03 - All challenges the JWT caller has joined, with live progress.
+    // syncAndNotifyActivations() removed — status sync runs at midnight IST,
+    // activation notifications fire at 8:00 AM IST via the scheduler.
     @Override
     @Transactional(readOnly = false)
     public List<MyChallengeResponseDTO> getMyChallenges()
             throws WellnessTrackerException {
         Integer callerId = authenticatedUserResolver.resolveCurrentUserId();
-
-        statusSyncService.syncAndNotifyActivations();
 
         List<ChallengeParticipant> participations = participantRepository
                 .findByUser_UserIdOrderByJoinedAtDesc(callerId);

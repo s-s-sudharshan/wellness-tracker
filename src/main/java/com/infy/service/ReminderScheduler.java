@@ -53,6 +53,49 @@ public class ReminderScheduler {
     @Autowired
     private NotificationService notificationService;
 
+    @Autowired
+    private ChallengeStatusSyncService challengeStatusSyncService;
+
+    // -------------------------------------------------------------------------
+    // Job 1 — Challenge Status Sync (midnight IST)
+    // Runs at 00:00 IST daily.
+    // Performs a plain bulk status sync — UPCOMING → ACTIVE and ACTIVE → COMPLETED —
+    // so the DB reflects the correct state before users start their day.
+    // Activation notifications are NOT sent here — they fire at 8:00 AM (Job 2).
+    // -------------------------------------------------------------------------
+    @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Kolkata")
+    @Transactional
+    public void syncChallengeStatuses() {
+        LOGGER.info("ReminderScheduler: starting challenge status sync.");
+        try {
+            challengeStatusSyncService.syncStatuses();
+            LOGGER.info("ReminderScheduler: challenge status sync complete.");
+        } catch (Exception e) {
+            LOGGER.error("ReminderScheduler: challenge status sync failed.", e);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Job 2 — Challenge Activation Notifications (8:00 AM IST)
+    // Runs at 08:00 IST daily.
+    // Syncs statuses AND sends notifications to participants of challenges that
+    // became ACTIVE today. Fires at a user-friendly time so notifications arrive
+    // when users are likely to check the app, not at midnight.
+    // Dedup in NotificationRepository prevents duplicate activation notifications
+    // if this job fires more than once (e.g. scheduler hiccup).
+    // -------------------------------------------------------------------------
+    @Scheduled(cron = "0 0 8 * * *", zone = "Asia/Kolkata")
+    @Transactional
+    public void notifyChallengeActivations() {
+        LOGGER.info("ReminderScheduler: starting challenge activation notification sweep.");
+        try {
+            challengeStatusSyncService.syncAndNotifyActivations();
+            LOGGER.info("ReminderScheduler: challenge activation notification sweep complete.");
+        } catch (Exception e) {
+            LOGGER.error("ReminderScheduler: challenge activation notification sweep failed.", e);
+        }
+    }
+
     // -------------------------------------------------------------------------
     // Reminder 1 — No Activity Logged Today
     // Runs at 7:00 PM IST daily.
@@ -155,9 +198,8 @@ public class ReminderScheduler {
                         }
 
                         // Fix 2: date-based guard against stale DB status column.
-                        // syncStatuses() is not called here — a challenge whose endDate
-                        // has passed but whose status is still ACTIVE in the DB would
-                        // slip through the COMPLETED check below without this guard.
+                        // syncStatuses() now runs at midnight — but this guard remains
+                        // as a safety net in case the midnight job was delayed or failed.
                         if (today.isAfter(endDate)) {
                             continue;
                         }

@@ -53,9 +53,6 @@ public class ChallengeServiceImpl implements ChallengeService {
     private DepartmentRepository departmentRepository;
 
     @Autowired
-    private ChallengeStatusSyncService statusSyncService;
-
-    @Autowired
     private ChallengeParticipantRepository participantRepository;
 
     @Autowired
@@ -74,11 +71,9 @@ public class ChallengeServiceImpl implements ChallengeService {
     public Integer createChallenge(ChallengeRequestDTO requestDTO)
             throws WellnessTrackerException {
 
-        // Creator is always the JWT caller — no DTO field to cross-check against
         User caller = authenticatedUserResolver.resolveCurrentUser();
 
         // Defence-in-depth: @PreAuthorize already enforced MANAGER or HR.
-        // This guard catches any misconfiguration at the service boundary.
         if (Role.EMPLOYEE.equals(caller.getRole())) {
             throw new WellnessTrackerException("Service.NOT_A_MANAGER_OR_HR");
         }
@@ -93,7 +88,6 @@ public class ChallengeServiceImpl implements ChallengeService {
                     "Service.DEPARTMENT_NOT_ALLOWED_FOR_COMPANY_WIDE");
         }
 
-        // For DEPARTMENT challenges: caller's dept must match the requested dept
         if (requestDTO.getVisibilityType() == VisibilityType.DEPARTMENT) {
             Integer callerDeptId = caller.getDepartment() != null
                     ? caller.getDepartment().getDepartmentId() : null;
@@ -107,7 +101,6 @@ public class ChallengeServiceImpl implements ChallengeService {
         }
 
         Challenge challenge = new Challenge();
-        // Creator set directly from JWT caller — no DTO field involved
         challenge.setCreatedBy(caller);
         challenge.setTitle(requestDTO.getTitle());
         challenge.setDescription(requestDTO.getDescription());
@@ -172,13 +165,10 @@ public class ChallengeServiceImpl implements ChallengeService {
     }
 
     // US 13 - Edit an UPCOMING challenge.
-    // Ownership: caller must be the creator — verified using JWT identity.
-    // requestingUserId was already removed from ChallengeUpdateRequestDTO.
+    // syncStatuses() removed — handled by scheduled job at midnight IST.
     @Override
     public ChallengeResponseDTO updateChallenge(Integer challengeId,
             ChallengeUpdateRequestDTO requestDTO) throws WellnessTrackerException {
-
-        statusSyncService.syncStatuses();
 
         User caller = authenticatedUserResolver.resolveCurrentUser();
 
@@ -211,11 +201,9 @@ public class ChallengeServiceImpl implements ChallengeService {
     }
 
     // US 13 - Delete an UPCOMING challenge.
-    // Ownership: caller must be the creator — verified using JWT identity.
+    // syncStatuses() removed — handled by scheduled job at midnight IST.
     @Override
     public void deleteChallenge(Integer challengeId) throws WellnessTrackerException {
-
-        statusSyncService.syncStatuses();
 
         User caller = authenticatedUserResolver.resolveCurrentUser();
 
@@ -241,7 +229,7 @@ public class ChallengeServiceImpl implements ChallengeService {
     }
 
     // US 13 - Get all challenges created by a manager or HR user.
-    // managerId is the TARGET being viewed — not necessarily the caller.
+    // syncStatuses() removed — handled by scheduled job at midnight IST.
     @Override
     @Transactional(readOnly = false)
     public List<ChallengeResponseDTO> getChallengesByManager(Integer managerId)
@@ -253,8 +241,6 @@ public class ChallengeServiceImpl implements ChallengeService {
         if (Role.EMPLOYEE.equals(manager.getRole())) {
             throw new WellnessTrackerException("Service.NOT_A_MANAGER_OR_HR");
         }
-
-        statusSyncService.syncStatuses();
 
         List<Challenge> challenges = challengeRepository
                 .findByCreatedBy_UserIdOrderByCreatedAtDesc(managerId);
@@ -271,13 +257,11 @@ public class ChallengeServiceImpl implements ChallengeService {
     }
 
     // US 13 / 03 - Get a single challenge by ID (visibility-guarded).
-    // Caller derived from JWT.
+    // syncStatuses() removed — handled by scheduled job at midnight IST.
     @Override
     @Transactional(readOnly = false)
     public ChallengeResponseDTO getChallengeById(Integer challengeId)
             throws WellnessTrackerException {
-
-        statusSyncService.syncStatuses();
 
         User caller = authenticatedUserResolver.resolveCurrentUser();
 
@@ -309,13 +293,12 @@ public class ChallengeServiceImpl implements ChallengeService {
     }
 
     // US 07 - Featured challenges visible to the JWT caller's department.
+    // syncStatuses() removed — handled by scheduled job at midnight IST.
     @Override
     @Transactional(readOnly = false)
     public List<ActiveChallengeResponseDTO> getFeaturedChallenges()
             throws WellnessTrackerException {
         User caller = authenticatedUserResolver.resolveCurrentUser();
-
-        statusSyncService.syncStatuses();
 
         if (caller.getDepartment() == null) {
             return new ArrayList<>();

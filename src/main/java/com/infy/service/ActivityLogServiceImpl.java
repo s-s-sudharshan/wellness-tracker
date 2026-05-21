@@ -24,7 +24,6 @@ import com.infy.entity.User;
 import com.infy.enums.ActivityType;
 import com.infy.exception.WellnessTrackerException;
 import com.infy.repository.ActivityLogRepository;
-import com.infy.repository.UserRepository;
 import com.infy.security.AuthenticatedUserResolver;
 
 @Service
@@ -35,15 +34,11 @@ public class ActivityLogServiceImpl implements ActivityLogService {
     private ActivityLogRepository activityLogRepository;
 
     @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
     private AuthenticatedUserResolver authenticatedUserResolver;
 
     @Override
     public Integer createActivityLog(ActivityLogRequestDTO requestDTO)
             throws WellnessTrackerException {
-        // Identity derived from JWT — never from request body
         User caller = authenticatedUserResolver.resolveCurrentUser();
 
         ActivityLog activityLog = new ActivityLog();
@@ -109,25 +104,24 @@ public class ActivityLogServiceImpl implements ActivityLogService {
         return responseList;
     }
 
-    // Manager/HR viewing a target user's summary — userId is the TARGET, not caller.
-    // @PreAuthorize("hasRole('MANAGER') or hasRole('HR')") enforces role gate.
+    // US 02 - JWT caller's own activity summary.
+    // userId derived from JWT — no longer accepted as a parameter.
+    // No role or scope check needed — caller can only ever see their own data.
     @Override
     @Transactional(readOnly = true)
-    public ActivitySummaryDTO getActivitySummary(Integer userId, LocalDate fromDate,
+    public ActivitySummaryDTO getActivitySummary(LocalDate fromDate,
             LocalDate toDate) throws WellnessTrackerException {
-        if (!userRepository.existsById(userId)) {
-            throw new WellnessTrackerException("Service.USER_NOT_FOUND");
-        }
+        Integer callerId = authenticatedUserResolver.resolveCurrentUserId();
 
         if (fromDate.isAfter(toDate)) {
             throw new WellnessTrackerException("Service.INVALID_DATE_RANGE");
         }
 
         Integer totalActivities = activityLogRepository
-                .countByUser_UserIdAndActivityDateBetween(userId, fromDate, toDate);
+                .countByUser_UserIdAndActivityDateBetween(callerId, fromDate, toDate);
 
         List<Object[]> rawSummary = activityLogRepository
-                .findSummaryByUserAndDateRange(userId, fromDate, toDate);
+                .findSummaryByUserAndDateRange(callerId, fromDate, toDate);
 
         List<ActivityMetricDTO> metrics = new ArrayList<>();
         for (Object[] row : rawSummary) {
@@ -139,29 +133,29 @@ public class ActivityLogServiceImpl implements ActivityLogService {
         }
 
         ActivitySummaryDTO summaryDTO = new ActivitySummaryDTO();
-        summaryDTO.setUserId(userId);
+        summaryDTO.setUserId(callerId);
         summaryDTO.setFromDate(fromDate);
         summaryDTO.setToDate(toDate);
-        summaryDTO.setTotalActivities(totalActivities);
+        summaryDTO.setTotalActivities(totalActivities != null ? totalActivities : 0);
         summaryDTO.setMetrics(metrics);
         return summaryDTO;
     }
 
-    // Manager/HR viewing a target user's trend — userId is the TARGET, not caller.
+    // US 02 - JWT caller's own activity trend.
+    // userId derived from JWT — no longer accepted as a parameter.
+    // No role or scope check needed — caller can only ever see their own data.
     @Override
     @Transactional(readOnly = true)
-    public List<ActivityTrendPointDTO> getActivityTrend(Integer userId, LocalDate fromDate,
+    public List<ActivityTrendPointDTO> getActivityTrend(LocalDate fromDate,
             LocalDate toDate, ActivityType metricType) throws WellnessTrackerException {
-        if (!userRepository.existsById(userId)) {
-            throw new WellnessTrackerException("Service.USER_NOT_FOUND");
-        }
+        Integer callerId = authenticatedUserResolver.resolveCurrentUserId();
 
         if (fromDate.isAfter(toDate)) {
             throw new WellnessTrackerException("Service.INVALID_DATE_RANGE");
         }
 
         List<Object[]> raw = activityLogRepository
-                .findTrendByUserAndDateRange(userId, fromDate, toDate);
+                .findTrendByUserAndDateRange(callerId, fromDate, toDate);
 
         List<ActivityTrendPointDTO> result = new ArrayList<>();
         for (Object[] row : raw) {

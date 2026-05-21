@@ -47,9 +47,9 @@ public class RecommendationServiceImpl implements RecommendationService {
     @Autowired private ChallengeParticipantRepository participantRepository;
     @Autowired private RecommendationRepository       recommendationRepository;
     @Autowired private WellnessArticleRepository      articleRepository;
-    @Autowired private ChallengeStatusSyncService     statusSyncService;
     @Autowired private AuthenticatedUserResolver      authenticatedUserResolver;
 
+    // syncStatuses() removed — handled by scheduled job at midnight IST.
     // userId derived from JWT — never from a caller-supplied parameter.
     @Override
     public List<RecommendationResponseDTO> getRecommendations()
@@ -57,8 +57,6 @@ public class RecommendationServiceImpl implements RecommendationService {
 
         User caller = authenticatedUserResolver.resolveCurrentUser();
         Integer userId = caller.getUserId();
-
-        statusSyncService.syncStatuses();
 
         LocalDate today   = LocalDate.now();
         LocalDate weekAgo = today.minusDays(6);

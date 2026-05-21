@@ -15,7 +15,6 @@ import com.infy.exception.WellnessTrackerException;
 public interface ActivityLogService {
 
     // Any authenticated user can log their own activity.
-    // Caller identity derived from JWT inside the implementation.
     @PreAuthorize("isAuthenticated()")
     public Integer createActivityLog(ActivityLogRequestDTO requestDTO)
             throws WellnessTrackerException;
@@ -33,16 +32,16 @@ public interface ActivityLogService {
     @PreAuthorize("isAuthenticated()")
     public List<ActivityLogResponseDTO> getActivityHistory() throws WellnessTrackerException;
 
-    // Manager or HR can view any user's activity summary.
-    // userId here is the TARGET user — not the caller.
-    @PreAuthorize("hasRole('MANAGER') or hasRole('HR')")
-    public ActivitySummaryDTO getActivitySummary(Integer userId, LocalDate fromDate,
-            LocalDate toDate) throws WellnessTrackerException;
+    // US 02 - Any authenticated user can view their own activity summary.
+    // userId removed — derived from JWT inside implementation.
+    @PreAuthorize("isAuthenticated()")
+    public ActivitySummaryDTO getActivitySummary(LocalDate fromDate, LocalDate toDate)
+            throws WellnessTrackerException;
 
-    // Manager or HR can view any user's activity trend.
-    // userId here is the TARGET user — not the caller.
-    @PreAuthorize("hasRole('MANAGER') or hasRole('HR')")
-    public List<ActivityTrendPointDTO> getActivityTrend(Integer userId, LocalDate fromDate,
+    // US 02 - Any authenticated user can view their own activity trend.
+    // userId removed — derived from JWT inside implementation.
+    @PreAuthorize("isAuthenticated()")
+    public List<ActivityTrendPointDTO> getActivityTrend(LocalDate fromDate,
             LocalDate toDate, ActivityType metricType) throws WellnessTrackerException;
 
     // Returns the JWT caller's filtered activity history.
